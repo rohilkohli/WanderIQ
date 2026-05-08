@@ -12,7 +12,8 @@ export const useSyncItinerary = () => {
     const syncTimeout = setTimeout(async () => {
       try {
         const itineraryRef = doc(db, 'itineraries', activeItinerary.id);
-        const { id, ...dataToSync } = activeItinerary;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id: _id, ...dataToSync } = activeItinerary;
         await updateDoc(itineraryRef, {
           ...dataToSync,
           updatedAt: new Date().toISOString()

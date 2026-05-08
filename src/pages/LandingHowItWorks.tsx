@@ -1,9 +1,6 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { DESTINATIONS, FEATURES, STATS } from "./LandingConstants";
 
 export const LandingHowItWorks: React.FC = () => {
-  const navigate = useNavigate();
   return (
     <section id="how-it-works" aria-labelledby="how-heading" style={{ background: "var(--color-surface)", padding: "var(--space-24) var(--space-8)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>

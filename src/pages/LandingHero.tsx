@@ -1,15 +1,17 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { DESTINATIONS, FEATURES, STATS } from "./LandingConstants";
+import { DESTINATIONS } from "./LandingConstants";
 
 export interface LandingHeroProps {
-  moodQuery: any;
-  setMoodQuery: any;
-  handleMoodSearch: any;
-  handleCTA: any;
+  /** Current value of the mood/destination search query. */
+  moodQuery: string;
+  /** Setter for the mood search query. */
+  setMoodQuery: (query: string) => void;
+  /** Handler for form submission of the mood search. */
+  handleMoodSearch: (e: React.FormEvent) => void;
+  /** Handler for the primary call-to-action button. */
+  handleCTA: () => void;
 }
 export const LandingHero: React.FC<LandingHeroProps> = ({ moodQuery, setMoodQuery, handleMoodSearch, handleCTA }) => {
-  const navigate = useNavigate();
   return (
     <section aria-labelledby="hero-heading" style={{ minHeight: "92vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "var(--space-16) var(--space-8)", position: "relative", overflow: "hidden" }}>
       {/* Background decoration */}

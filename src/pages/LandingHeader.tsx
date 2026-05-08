@@ -1,10 +1,12 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { DESTINATIONS, FEATURES, STATS } from "./LandingConstants";
+import type { User } from 'firebase/auth';
 
 export interface LandingHeaderProps {
-  user: any;
-  setShowSignIn: any;
+  /** The currently authenticated Firebase user, or null if signed out. */
+  user: User | null;
+  /** Callback to toggle the sign-in modal visibility. */
+  setShowSignIn: (show: boolean) => void;
 }
 export const LandingHeader: React.FC<LandingHeaderProps> = ({ user, setShowSignIn }) => {
   const navigate = useNavigate();

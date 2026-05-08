@@ -64,22 +64,25 @@ describe('getBudgetHealth', () => {
 });
 
 describe('calculateEstimatedSpend & getBudgetSummary', () => {
-  const dummyItinerary: any = {
+  const dummyItinerary = {
     totalBudget: 10000,
     budget: { flights: 1000, accommodation: 2000, food: 0, activities: 0, transport: 0, miscellaneous: 0 },
     days: [
       {
-        morning: [{ estimatedCost: 500 }],
-        afternoon: [{ estimatedCost: 200 }],
+        id: 'd1', dayNumber: 1,
+        morning: [{ id: 'a1', name: 'Yoga', category: 'wellness' as const, description: '', address: '', location: { lat: 0, lng: 0 }, duration: 60, estimatedCost: 500, source: 'manual' as const, tags: [] }],
+        afternoon: [{ id: 'a2', name: 'Market', category: 'experience' as const, description: '', address: '', location: { lat: 0, lng: 0 }, duration: 60, estimatedCost: 200, source: 'manual' as const, tags: [] }],
         evening: []
       },
       {
+        id: 'd2', dayNumber: 2,
         morning: [],
-        afternoon: [{ estimatedCost: 1000 }],
-        evening: [{ estimatedCost: 300 }]
+        afternoon: [{ id: 'a3', name: 'Tour', category: 'experience' as const, description: '', address: '', location: { lat: 0, lng: 0 }, duration: 60, estimatedCost: 1000, source: 'manual' as const, tags: [] }],
+        evening: [{ id: 'a4', name: 'Dinner', category: 'restaurant' as const, description: '', address: '', location: { lat: 0, lng: 0 }, duration: 60, estimatedCost: 300, source: 'manual' as const, tags: [] }]
       }
     ]
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any;
 
   it('calculates estimated spend correctly', () => {
     expect(calculateEstimatedSpend(dummyItinerary)).toBe(2000);

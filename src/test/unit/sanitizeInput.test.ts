@@ -20,7 +20,6 @@ describe('sanitizeInput', () => {
     expect(sanitizeInput(long, 100).length).toBeLessThanOrEqual(100);
   });
   it('returns empty string for non-string input', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(sanitizeInput(null as unknown as string)).toBe('');
   });
   it('allows normal travel text', () => {

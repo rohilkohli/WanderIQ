@@ -1,9 +1,7 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { DESTINATIONS, FEATURES, STATS } from "./LandingConstants";
+import { FEATURES } from "./LandingConstants";
 
 export const LandingFeatures: React.FC = () => {
-  const navigate = useNavigate();
   return (
     <section id="features" aria-labelledby="features-heading" style={{ padding: "var(--space-24) var(--space-8)", maxWidth: 1200, margin: "0 auto" }}>
       <header style={{ textAlign: "center", marginBottom: "var(--space-12)" }}>

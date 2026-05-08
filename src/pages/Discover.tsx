@@ -1,10 +1,6 @@
-import { DEMO_DESTINATIONS, PRICE_LABELS, CONDITION_BG } from "@/components/planner/demo-data";
+import { PRICE_LABELS, CONDITION_BG } from "@/components/planner/demo-data";
 import React from "react";
 import { useDiscoverLogic } from "@/hooks/useDiscoverLogic";
-
-import { analytics } from "@/lib/analytics";
-import { sanitizeInput } from "@/lib/utils";
-import type { DestinationResult } from "@/types";
 
 /* ── Demo destination data ─────────────────────────────── */
 

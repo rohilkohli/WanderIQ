@@ -1,9 +1,6 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { DESTINATIONS, FEATURES, STATS } from "./LandingConstants";
 
 export const LandingFooter: React.FC = () => {
-  const navigate = useNavigate();
   return (
     <footer role="contentinfo" style={{ background: "var(--color-accent)", color: "rgba(255,255,255,0.8)", padding: "var(--space-8) var(--space-8)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-4)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>

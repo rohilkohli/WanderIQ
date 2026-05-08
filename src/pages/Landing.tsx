@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
 import SignInModal from "@/components/auth/SignInModal";
 
-import { DESTINATIONS, FEATURES, STATS } from "./LandingConstants";
+
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();

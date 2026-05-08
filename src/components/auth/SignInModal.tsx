@@ -1,10 +1,17 @@
 import React, { useState, useRef } from "react";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signInAnonymously } from "firebase/auth";
+import type { User } from "firebase/auth";
 import { auth } from "@/firebase";
 import { useAuthStore } from "@/store/useAuthStore";
 import { analytics } from "@/lib/analytics";
 import { isValidEmail } from "@/lib/utils";
 import toast from "react-hot-toast";
+
+/** Minimal shape of a Firebase error object. */
+interface FirebaseError {
+  code?: string;
+  message?: string;
+}
 
 interface SignInModalProps {
   onClose: () => void;
@@ -46,14 +53,15 @@ const SignInModal: React.FC<SignInModalProps> = ({ onClose }) => {
         toast.success("Account created! Welcome to WanderIQ.");
       }
       onClose();
-    } catch (err: any) {
-      if (err?.code === 'auth/invalid-api-key' || auth.app.options.apiKey === 'demo-api-key') {
+    } catch (err: unknown) {
+      const firebaseErr = err as FirebaseError;
+      if (firebaseErr?.code === 'auth/invalid-api-key' || auth.app.options.apiKey === 'demo-api-key') {
         // Fallback for demo mode
-        setUser({ uid: 'mock-user-id', email, displayName: email.split('@')[0] } as any);
+        setUser({ uid: 'mock-user-id', email, displayName: email.split('@')[0] } as User);
         toast.success("Welcome (Demo Mode)!");
         onClose();
       } else {
-        const message = err?.message ?? "Authentication failed.";
+        const message = firebaseErr?.message ?? "Authentication failed.";
         toast.error(
           message
             .replace("Firebase: ", "")
@@ -74,9 +82,10 @@ const SignInModal: React.FC<SignInModalProps> = ({ onClose }) => {
       analytics.signIn("google");
       toast.success(`Welcome, ${cred.user.displayName?.split(" ")[0] ?? "traveller"}!`);
       onClose();
-    } catch (err: any) {
-      if (err?.code === 'auth/invalid-api-key' || auth.app.options.apiKey === 'demo-api-key') {
-        setUser({ uid: 'mock-google-id', email: 'guest@wanderiq.app', displayName: 'Google Guest' } as any);
+    } catch (err: unknown) {
+      const firebaseErr = err as FirebaseError;
+      if (firebaseErr?.code === 'auth/invalid-api-key' || auth.app.options.apiKey === 'demo-api-key') {
+        setUser({ uid: 'mock-google-id', email: 'guest@wanderiq.app', displayName: 'Google Guest' } as User);
         toast.success("Welcome, Google Guest (Demo Mode)!");
         onClose();
       } else {
@@ -95,9 +104,10 @@ const SignInModal: React.FC<SignInModalProps> = ({ onClose }) => {
       analytics.signIn("guest");
       toast.success("Continuing as guest. You can upgrade anytime!");
       onClose();
-    } catch (err: any) {
-      if (err?.code === 'auth/invalid-api-key' || auth.app.options.apiKey === 'demo-api-key') {
-        setUser({ uid: 'mock-guest-id', isAnonymous: true, displayName: 'Guest Traveler' } as any);
+    } catch (err: unknown) {
+      const firebaseErr = err as FirebaseError;
+      if (firebaseErr?.code === 'auth/invalid-api-key' || auth.app.options.apiKey === 'demo-api-key') {
+        setUser({ uid: 'mock-guest-id', isAnonymous: true, displayName: 'Guest Traveler' } as User);
         toast.success("Continuing as guest (Demo Mode).");
         onClose();
       } else {

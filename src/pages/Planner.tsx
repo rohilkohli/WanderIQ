@@ -54,7 +54,7 @@ const Planner: React.FC = () => {
         }
       }
     },
-    [currentDay, selectedDay],
+    [currentDay, reorderActivities],
   );
 
   const handleDelete = (dayId: string, slot: TimeSlot, actId: string) => {
