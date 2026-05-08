@@ -5,7 +5,7 @@ import { useDiscoverLogic } from "@/hooks/useDiscoverLogic";
 /* ── Demo destination data ─────────────────────────────── */
 
 const Discover: React.FC = () => {
-  const { moodQuery, setMoodQuery, destinations, loading, view, setView, compareIds, toggleCompare, compareDestinations, handleMoodSearch, handleSelectDestination } = useDiscoverLogic();
+  const { moodQuery, setMoodQuery, destinations, loading, view, setView, compareIds, toggleCompare, compareDestinations, aiStatus, handleMoodSearch, handleSelectDestination } = useDiscoverLogic();
 
   return (
     <div style={{ padding: "var(--space-8)", maxWidth: 1200, margin: "0 auto" }}>
@@ -62,7 +62,10 @@ const Discover: React.FC = () => {
             <h2 id="results-heading" style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem" }}>
               {destinations.length} destinations found
             </h2>
-            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                {aiStatus === "validated_fallback" ? "Validated / AI Fallback" : aiStatus === "fallback_demo" ? "Demo Fallback" : "Validated"}
+              </span>
               {(["grid", "compare"] as const).map((v) => (
                 <button key={v} onClick={() => setView(v)} className={`btn btn-sm ${view === v ? "btn-primary" : "btn-ghost"}`} aria-pressed={view === v}>
                   {v === "grid" ? "⊞ Grid" : "⇔ Compare"}

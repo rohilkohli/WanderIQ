@@ -343,6 +343,13 @@ export interface ChatMessage {
   timestamp: string;
   imageUrl?: string;
   isStreaming?: boolean;
+  aiMeta?: {
+    provider?: string;
+    model?: string;
+    validated?: boolean;
+    fallbackUsed?: boolean;
+    status?: string;
+  };
 }
 
 /**

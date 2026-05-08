@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useGeminiChat } from "@/hooks/useGeminiChat";
+import { submitAiFeedback } from "@/lib/aiMemory";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface ChatDrawerProps {
   onClose: () => void;
@@ -8,7 +10,9 @@ interface ChatDrawerProps {
 
 const ChatDrawer: React.FC<ChatDrawerProps> = ({ onClose, itineraryContext }) => {
   const { messages, isLoading, sendMessage } = useGeminiChat(itineraryContext);
+  const user = useAuthStore((s) => s.user);
   const [input, setInput] = useState("");
+  const [feedbackById, setFeedbackById] = useState<Record<string, "up" | "down">>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -36,6 +40,19 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ onClose, itineraryContext }) =>
 
   const QUICK_PROMPTS = ["What should I pack?", "Suggest vegetarian restaurants", "Optimize my budget", "Travel tips for this destination"];
 
+  const handleFeedback = async (messageId: string, responseId: string, rating: "up" | "down", provider?: string, model?: string) => {
+    if (feedbackById[messageId]) return;
+    setFeedbackById((prev) => ({ ...prev, [messageId]: rating }));
+    await submitAiFeedback({
+      feature: "chat",
+      responseId,
+      rating,
+      provider,
+      model,
+      userId: user?.uid ?? "guest",
+    });
+  };
+
   return (
     <>
       <div className="overlay-backdrop" onClick={onClose} aria-hidden="true" />
@@ -47,7 +64,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ onClose, itineraryContext }) =>
           </div>
           <div style={{ flex: 1 }}>
             <h2 style={{ fontSize: "1rem", fontFamily: "var(--font-display)", marginBottom: 2 }}>AI Travel Assistant</h2>
-            <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Powered by Gemini · Always ready</p>
+            <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Validated AI with fallback support · Always ready</p>
           </div>
           <button onClick={onClose} aria-label="Close AI assistant" style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--color-text-muted)", fontSize: "1.5rem", padding: "var(--space-1)", borderRadius: "var(--radius-sm)", lineHeight: 1 }}>
             ×
@@ -105,6 +122,32 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ onClose, itineraryContext }) =>
                 ) : (
                   <span dangerouslySetInnerHTML={{ __html: formatMarkdown(msg.content) }} />
                 )}
+                {msg.role === "model" && !msg.isStreaming && (
+                  <div style={{ marginTop: "var(--space-2)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-2)" }}>
+                    <span style={{ fontSize: "0.6875rem", color: "var(--color-text-muted)" }}>
+                      {msg.aiMeta?.fallbackUsed ? "Validated / AI Fallback" : "Validated"}
+                      {msg.aiMeta?.provider ? ` · ${msg.aiMeta.provider}` : ""}
+                    </span>
+                    <div style={{ display: "flex", gap: "var(--space-1)" }}>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ minHeight: 24, padding: "2px 8px" }}
+                        disabled={Boolean(feedbackById[msg.id])}
+                        onClick={() => handleFeedback(msg.id, msg.id, "up", msg.aiMeta?.provider, msg.aiMeta?.model)}
+                      >
+                        👍
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ minHeight: 24, padding: "2px 8px" }}
+                        disabled={Boolean(feedbackById[msg.id])}
+                        onClick={() => handleFeedback(msg.id, msg.id, "down", msg.aiMeta?.provider, msg.aiMeta?.model)}
+                      >
+                        👎
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -122,7 +165,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ onClose, itineraryContext }) =>
               {isLoading ? <span style={{ display: "block", width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white", borderRadius: "50%", animation: "spin 1s linear infinite" }} /> : "↑"}
             </button>
           </div>
-          <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "var(--space-2)", textAlign: "center" }}>Powered by Gemini 2.5 Flash · Press Enter to send</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "var(--space-2)", textAlign: "center" }}>Streaming AI responses · Press Enter to send</p>
         </div>
       </aside>
     </>
