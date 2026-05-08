@@ -1,0 +1,21 @@
+{
+  "name": "WanderIQ — AI Travel Planning Engine",
+  "short_name": "WanderIQ",
+  "description": "AI-powered travel planning engine that builds personalized multi-day itineraries.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F4EE",
+  "theme_color": "#1B4332",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["travel", "lifestyle", "productivity"],
+  "lang": "en",
+  "dir": "ltr"
+}
