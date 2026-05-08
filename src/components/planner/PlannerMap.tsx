@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { ItineraryDay } from "@/types";
 import { CATEGORY_COLORS, CATEGORY_ICONS } from "./constants";
-import { Loader } from "@googlemaps/js-api-loader";
+import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 
 export interface PlannerMapProps {
   currentDay?: ItineraryDay;
@@ -11,96 +11,177 @@ export interface PlannerMapProps {
 export const PlannerMap: React.FC<PlannerMapProps> = ({ currentDay }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+  const markersRef = useRef<google.maps.Marker[]>([]);
+  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
+  const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
+  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
 
   useEffect(() => {
     const initMap = async () => {
-      // NOTE: In a real app, this should be in an environment variable e.g. VITE_GOOGLE_MAPS_API_KEY
-      // The user wants full implementation, we will use the loader but gracefully handle missing keys
-      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_MAPS_API_KEY || "";
       if (!apiKey) {
         console.warn("Google Maps API Key missing. Rendering placeholder.");
         return;
       }
 
-      const loader = new Loader({
-        apiKey,
-        version: "weekly",
-      });
-
       try {
-        // @ts-ignore
-        const { Map } = await loader.importLibrary("maps");
-        if (mapRef.current) {
-          const newMap = new Map(mapRef.current, {
-            center: { lat: 15.2993, lng: 74.124 }, // Default to Goa coordinates
-            zoom: 10,
-            mapId: "WANDERIQ_MAP_ID",
-            disableDefaultUI: true,
-            zoomControl: true,
-          });
-          setMap(newMap);
-        }
+        setOptions({
+          key: apiKey,
+          v: "weekly",
+        });
+        const [{ Map }, { PlacesService }, { DirectionsService, DirectionsRenderer }] = await Promise.all([
+          importLibrary("maps") as Promise<google.maps.MapsLibrary>,
+          importLibrary("places") as Promise<google.maps.PlacesLibrary>,
+          importLibrary("routes") as Promise<google.maps.RoutesLibrary>,
+        ]);
+
+        if (!mapRef.current) return;
+        const newMap = new Map(mapRef.current, {
+          center: { lat: 15.2993, lng: 74.124 },
+          zoom: 10,
+          mapId: "WANDERIQ_MAP_ID",
+          disableDefaultUI: true,
+          zoomControl: true,
+        });
+        placesServiceRef.current = new PlacesService(newMap);
+        directionsServiceRef.current = new DirectionsService();
+        directionsRendererRef.current = new DirectionsRenderer({
+          suppressMarkers: true,
+          preserveViewport: true,
+          polylineOptions: {
+            strokeColor: "#1B4332",
+            strokeOpacity: 0.85,
+            strokeWeight: 4,
+          },
+        });
+        directionsRendererRef.current.setMap(newMap);
+        setMap(newMap);
       } catch (err) {
         console.error("Error loading Google Maps", err);
       }
     };
 
     initMap();
+
+    return () => {
+      markersRef.current.forEach((marker) => marker.setMap(null));
+      markersRef.current = [];
+      directionsRendererRef.current?.setMap(null);
+    };
   }, []);
 
   useEffect(() => {
     if (!map || !currentDay) return;
 
-    // Clear old markers
-    markers.forEach((m) => m.setMap(null));
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = [];
 
-    const newMarkers: google.maps.Marker[] = [];
     const activities = [...currentDay.morning, ...currentDay.afternoon, ...currentDay.evening];
-    
-    const bounds = new google.maps.LatLngBounds();
-    let hasValidLocation = false;
+    let isCancelled = false;
 
-    activities.forEach((activity) => {
-      if (activity.location && activity.location.lat !== 0) {
-        hasValidLocation = true;
-        const position = { lat: activity.location.lat, lng: activity.location.lng };
+    const findPlace = (query: string): Promise<google.maps.LatLngLiteral | null> => {
+      const service = placesServiceRef.current;
+      if (!service || !query.trim()) return Promise.resolve(null);
+      return new Promise((resolve) => {
+        service.findPlaceFromQuery(
+          {
+            query,
+            fields: ["geometry"],
+          },
+          (results, status) => {
+            if (
+              status !== google.maps.places.PlacesServiceStatus.OK ||
+              !results ||
+              results.length === 0 ||
+              !results[0].geometry?.location
+            ) {
+              resolve(null);
+              return;
+            }
+            const location = results[0].geometry.location;
+            resolve({ lat: location.lat(), lng: location.lng() });
+          }
+        );
+      });
+    };
+
+    const renderMarkersAndRoute = async () => {
+      const resolved = await Promise.all(
+        activities.map(async (activity) => {
+          if (activity.location?.lat && activity.location?.lng) {
+            return { activity, position: { lat: activity.location.lat, lng: activity.location.lng } };
+          }
+          const place = await findPlace(`${activity.name} ${activity.address}`);
+          return place ? { activity, position: place } : null;
+        })
+      );
+      if (isCancelled) return;
+
+      const points = resolved.filter(Boolean) as Array<{
+        activity: (typeof activities)[number];
+        position: google.maps.LatLngLiteral;
+      }>;
+      if (points.length === 0) return;
+
+      const bounds = new google.maps.LatLngBounds();
+      points.forEach(({ activity, position }) => {
         bounds.extend(position);
-
-        // Simple marker for now. AdvancedMarkerElement can be used in the future
         const marker = new google.maps.Marker({
           position,
           map,
           title: activity.name,
-          // Custom icon based on category could be added here
         });
-        
-        newMarkers.push(marker);
-      }
-    });
+        markersRef.current.push(marker);
+      });
 
-    setMarkers(newMarkers);
-
-    if (hasValidLocation && newMarkers.length > 0) {
-      if (newMarkers.length === 1) {
-        map.setCenter(newMarkers[0].getPosition() as google.maps.LatLng);
+      if (points.length === 1) {
+        map.setCenter(points[0].position);
         map.setZoom(14);
-      } else {
-        map.fitBounds(bounds);
-        // Add some padding
-        const listener = google.maps.event.addListener(map, "idle", () => {
-          if (map.getZoom()! > 16) map.setZoom(16);
-          google.maps.event.removeListener(listener);
-        });
+        return;
       }
-    }
+
+      const directionsRenderer = directionsRendererRef.current;
+      const directionsService = directionsServiceRef.current;
+      if (directionsRenderer && directionsService) {
+        directionsRenderer.setMap(null);
+        directionsRenderer.setMap(map);
+        try {
+          const result = await directionsService.route({
+            origin: points[0].position,
+            destination: points[points.length - 1].position,
+            waypoints: points.slice(1, -1).map((point) => ({
+              location: point.position,
+              stopover: true,
+            })),
+            travelMode: google.maps.TravelMode.DRIVING,
+          });
+          if (!isCancelled) {
+            directionsRenderer.setDirections(result);
+          }
+          return;
+        } catch {
+          // Fall back to bounds-only mode.
+        }
+      }
+
+      map.fitBounds(bounds, 40);
+      const listener = google.maps.event.addListener(map, "idle", () => {
+        if (map.getZoom() && map.getZoom()! > 16) map.setZoom(16);
+        google.maps.event.removeListener(listener);
+      });
+    };
+
+    renderMarkersAndRoute();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [map, currentDay]);
 
-  const apiKeyExists = !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const apiKeyExists = !!(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_MAPS_API_KEY);
 
   return (
     <div role="application" aria-label="Trip map showing your itinerary locations" style={{ background: "var(--color-surface-alt)", borderLeft: "1px solid var(--color-border)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "var(--space-4)", overflow: "hidden", position: "relative", width: "100%", height: "100%" }}>
-      {/* Visually-hidden list for screen readers */}
       <ul className="sr-only">
         {currentDay &&
           [...currentDay.morning, ...currentDay.afternoon, ...currentDay.evening].map((a) => (
@@ -121,7 +202,6 @@ export const PlannerMap: React.FC<PlannerMapProps> = ({ currentDay }) => {
             <code style={{ display: "block", marginTop: "var(--space-3)", background: "var(--color-surface)", padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-sm)", fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--color-accent)" }}>VITE_GOOGLE_MAPS_API_KEY=your_key</code>
           </div>
 
-          {/* Placeholder Activity markers */}
           {currentDay &&
             [...currentDay.morning, ...currentDay.afternoon, ...currentDay.evening].map((a, i) => (
               <div key={a.id} style={{ position: "absolute", top: `${20 + i * 14}%`, left: `${25 + (i % 3) * 20}%`, background: CATEGORY_COLORS[a.category], color: "white", borderRadius: "var(--radius-full)", padding: "4px 10px", fontSize: "0.75rem", fontWeight: 700, boxShadow: "var(--shadow-md)", display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", animation: `fadeInUp 300ms ease-out ${i * 100}ms both`, whiteSpace: "nowrap", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }} title={a.name}>
