@@ -9,6 +9,10 @@ import { analytics } from "@/lib/analytics";
 import type { ActivityCard, ItineraryDay, TimeSlot } from "@/types";
 import toast from "react-hot-toast";
 
+const FUNCTIONS_BASE =
+  import.meta.env.VITE_FUNCTIONS_BASE_URL ||
+  'https://us-central1-prompt-wars-in-person-gurugram.cloudfunctions.net';
+
 import { DEMO_DAYS } from "@/components/planner/demo-data";
 import { TimeBlock } from "@/components/planner/TimeBlock";
 import { ConstraintBanner } from "@/components/planner/ConstraintBanner";
@@ -71,22 +75,55 @@ const Planner: React.FC = () => {
 
   const handleAutoFill = async (dayId: string, slot: TimeSlot) => {
     toast.loading("Gemini is filling your day…", { id: "autofill" });
-    await new Promise((r) => setTimeout(r, 1200));
-    const demoFill: ActivityCard = {
-      id: generateId(),
-      name: slot === "morning" ? "Sunrise Yoga" : slot === "afternoon" ? "Local Market" : "Beach Dinner",
-      category: slot === "morning" ? "wellness" : slot === "afternoon" ? "experience" : "restaurant",
-      description: "AI-suggested activity.",
-      address: "Goa, India",
-      location: { lat: 15.2993, lng: 74.124 },
-      duration: 90,
-      estimatedCost: slot === "morning" ? 500 : slot === "afternoon" ? 200 : 800,
-      source: "ai",
-      tags: ["AI Suggestion"],
-    };
-    addActivity(dayId, slot, demoFill);
-    analytics.dayAutoFilled(days.findIndex((d) => d.id === dayId) + 1);
-    toast.success("Day auto-filled by Gemini!", { id: "autofill" });
+    const day = days.find((d) => d.id === dayId);
+    const existingNames = day
+      ? [...day.morning, ...day.afternoon, ...day.evening].map((a) => a.name)
+      : [];
+    const destination = activeItinerary?.destination ?? 'Goa, India';
+    const dayNumber = day?.dayNumber ?? 1;
+
+    try {
+      const res = await fetch(`${FUNCTIONS_BASE}/geminiAutoFill`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination,
+          slot,
+          dayNumber,
+          preferences: { mobility: preferences.mobility, travelStyle: preferences.travelStyle },
+          existingActivities: existingNames,
+        }),
+      });
+
+      let activity: ActivityCard;
+      if (res.ok) {
+        const data = await res.json() as { activity: Omit<ActivityCard, 'id' | 'source'> };
+        activity = { ...data.activity, id: generateId(), source: 'ai' };
+      } else {
+        throw new Error(`Function error: ${res.status}`);
+      }
+
+      addActivity(dayId, slot, activity);
+      analytics.dayAutoFilled(days.findIndex((d) => d.id === dayId) + 1);
+      toast.success(`${activity.name} added by Gemini!`, { id: "autofill" });
+    } catch {
+      // Graceful fallback to a sensible default
+      const fallback: ActivityCard = {
+        id: generateId(),
+        name: slot === "morning" ? "Morning Exploration" : slot === "afternoon" ? "Local Sightseeing" : "Dinner & Sunset",
+        category: slot === "morning" ? "wellness" : slot === "afternoon" ? "experience" : "restaurant",
+        description: "Explore the local area and soak in the atmosphere.",
+        address: `${destination}`,
+        location: { lat: 15.2993, lng: 74.124 },
+        duration: 90,
+        estimatedCost: slot === "morning" ? 300 : slot === "afternoon" ? 500 : 800,
+        source: "ai",
+        tags: ["AI Suggestion"],
+      };
+      addActivity(dayId, slot, fallback);
+      analytics.dayAutoFilled(days.findIndex((d) => d.id === dayId) + 1);
+      toast.success("Day auto-filled!", { id: "autofill" });
+    }
   };
 
   const handleAddDay = () => {
@@ -100,9 +137,14 @@ const Planner: React.FC = () => {
       {/* Topbar */}
       <div style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)", padding: "var(--space-3) var(--space-6)", display: "flex", alignItems: "center", gap: "var(--space-4)", flexShrink: 0 }}>
         <div>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", marginBottom: 2 }}>🏖️ Goa, India</h1>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", marginBottom: 2 }}>
+            {activeItinerary?.destination ? `🗺️ ${activeItinerary.destination.name}` : "🏖️ My Trip"}
+          </h1>
           <p style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
-            Jun 15 – Jun 22 · {days.length} days · {formatCurrency(totalSpend)} / {formatCurrency(totalBudget)}
+            {activeItinerary?.dateRange?.start && activeItinerary?.dateRange?.end
+              ? `${activeItinerary.dateRange.start} – ${activeItinerary.dateRange.end} · `
+              : ""}
+            {days.length} day{days.length !== 1 ? "s" : ""} · {formatCurrency(totalSpend)} / {formatCurrency(totalBudget)}
           </p>
         </div>
         <div style={{ flex: 1 }} />

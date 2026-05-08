@@ -5,6 +5,11 @@ import { sanitizeInput } from '@/lib/utils';
 import type { DestinationResult } from '@/types';
 import { DEMO_DESTINATIONS } from '@/components/planner/demo-data';
 
+/** Cloud Functions base URL — falls back to localhost for dev. */
+const FUNCTIONS_BASE =
+  import.meta.env.VITE_FUNCTIONS_BASE_URL ||
+  'https://us-central1-prompt-wars-in-person-gurugram.cloudfunctions.net';
+
 /** Haversine distance in km between two lat/lng points. */
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -19,30 +24,60 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 }
 
 /**
- * Scores and sorts DEMO_DESTINATIONS by proximity to the given coordinates,
- * boosting match scores for closer destinations and suppressing the one
- * nearest to the user's current position (already there!).
+ * Scores and sorts destinations by proximity to the user, excluding
+ * locations they are already at (within 80 km).
  */
-function rankByLocation(lat: number, lng: number): DestinationResult[] {
-  const MAX_DIST = 5000; // km — treat anything beyond as equal
-  return DEMO_DESTINATIONS
+function rankByLocation(
+  destinations: DestinationResult[],
+  lat: number,
+  lng: number
+): DestinationResult[] {
+  return destinations
     .map((dest) => {
       const dist = haversineKm(lat, lng, dest.location.lat, dest.location.lng);
-      // Penalise destinations that are too close (< 100 km — user is already there)
       const proximityBoost = dist < 100 ? -20 : Math.max(0, 15 - Math.floor(dist / 400));
       return { ...dest, matchScore: Math.min(99, dest.matchScore + proximityBoost) };
     })
-    .filter((d) => {
-      // Hide destinations within 80 km of the user (they're already there)
-      const dist = haversineKm(lat, lng, d.location.lat, d.location.lng);
-      return dist > 80;
-    })
+    .filter((d) => haversineKm(lat, lng, d.location.lat, d.location.lng) > 80)
     .sort((a, b) => b.matchScore - a.matchScore);
 }
 
 /**
+ * Calls the Gemini discover Cloud Function to get AI-powered destination recommendations.
+ * Falls back to ranked demo data if the function is unavailable.
+ */
+async function fetchGeminiDestinations(
+  query: string,
+  userLat?: number,
+  userLng?: number
+): Promise<DestinationResult[]> {
+  try {
+    const res = await fetch(`${FUNCTIONS_BASE}/geminiDiscover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, userLat, userLng }),
+    });
+
+    if (!res.ok) throw new Error(`Function error: ${res.status}`);
+    const data = (await res.json()) as { destinations: DestinationResult[] };
+
+    if (!Array.isArray(data.destinations) || data.destinations.length === 0) {
+      throw new Error('Empty response from AI');
+    }
+    return data.destinations;
+  } catch {
+    // Graceful fallback to demo data with geo-ranking
+    const base = userLat && userLng
+      ? rankByLocation(DEMO_DESTINATIONS, userLat, userLng)
+      : DEMO_DESTINATIONS;
+    return base.length > 0 ? base : DEMO_DESTINATIONS;
+  }
+}
+
+/**
  * Custom hook encapsulating all Discover page logic.
- * Handles mood search, geo-location ranking, compare mode, and navigation.
+ * Handles AI mood search via Gemini Cloud Function, geo-location ranking,
+ * compare mode, and navigation to the Planner.
  */
 export const useDiscoverLogic = () => {
   const navigate = useNavigate();
@@ -58,8 +93,11 @@ export const useDiscoverLogic = () => {
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => { /* permission denied — silently fall back to default ranking */ }
+      (pos) =>
+        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {
+        /* permission denied — silently fall back to default ranking */
+      }
     );
   }, []);
 
@@ -69,12 +107,12 @@ export const useDiscoverLogic = () => {
     setLoading(true);
     analytics.discoverMoodSearch(q.length);
     try {
-      await new Promise((r) => setTimeout(r, 1400));
-      // Rank by geo-location if we have coords, otherwise use default list
-      const ranked = userCoords
-        ? rankByLocation(userCoords.lat, userCoords.lng)
-        : DEMO_DESTINATIONS;
-      setDestinations(ranked.length > 0 ? ranked : DEMO_DESTINATIONS);
+      const results = await fetchGeminiDestinations(
+        q,
+        userCoords?.lat,
+        userCoords?.lng
+      );
+      setDestinations(results);
     } finally {
       setLoading(false);
     }
@@ -83,7 +121,7 @@ export const useDiscoverLogic = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (params.get('mood')) handleMoodSearch();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSelectDestination = (dest: DestinationResult) => {
@@ -102,10 +140,14 @@ export const useDiscoverLogic = () => {
     .filter(Boolean) as DestinationResult[];
 
   return {
-    moodQuery, setMoodQuery,
-    destinations, loading,
-    view, setView,
-    compareIds, toggleCompare,
+    moodQuery,
+    setMoodQuery,
+    destinations,
+    loading,
+    view,
+    setView,
+    compareIds,
+    toggleCompare,
     compareDestinations,
     handleMoodSearch,
     handleSelectDestination,
