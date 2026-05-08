@@ -25,7 +25,7 @@ export const SortableActivity: React.FC<SortableActivityProps> = ({ activity, da
     <div ref={setNodeRef} style={style} role="listitem">
       <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "var(--space-3) var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-3)", cursor: isDragging ? "grabbing" : "grab", boxShadow: isDragging ? "var(--shadow-lg)" : "var(--shadow-sm)", transition: "box-shadow var(--transition-fast)", borderLeft: `3px solid ${CATEGORY_COLORS[activity.category]}` }}>
         {/* Drag handle */}
-        <button {...attributes} {...listeners} aria-label={`Drag ${activity.name} to reorder`} style={{ background: "transparent", border: "none", cursor: "grab", color: "var(--color-text-muted)", padding: "var(--space-1)", display: "flex", alignItems: "center", fontSize: "1rem", flexShrink: 0 }}>
+        <button {...attributes} {...listeners} aria-label={`Drag to reorder ${activity.name}`} style={{ background: "transparent", border: "none", cursor: "grab", color: "var(--color-text-muted)", padding: "var(--space-1)", display: "flex", alignItems: "center", fontSize: "1rem", flexShrink: 0 }}>
           ⠿
         </button>
 

@@ -7,6 +7,7 @@ import { signOut } from "firebase/auth";
 import SignInModal from "@/components/auth/SignInModal";
 import ChatDrawer from "@/components/assistant/ChatDrawer";
 import toast from "react-hot-toast";
+import { useSyncItinerary } from "@/hooks/useSyncItinerary";
 
 const NAV_ITEMS = [
   { to: "/dashboard", icon: "⊞", label: "Dashboard" },
@@ -23,6 +24,8 @@ const AppShell: React.FC = () => {
   const [showSignIn, setShowSignIn] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const navigate = useNavigate();
+
+  useSyncItinerary();
 
   const handleSignOut = async () => {
     try {

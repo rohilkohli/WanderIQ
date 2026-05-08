@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates, arrayMove } from "@dnd-kit/sortable";
 import { usePreferencesStore } from "@/store/usePreferencesStore";
+import { useItineraryStore } from "@/store/useItineraryStore";
 import { validateDay } from "@/lib/constraints";
 import { formatCurrency, generateId } from "@/lib/utils";
 import { analytics } from "@/lib/analytics";
@@ -15,10 +16,14 @@ import { PlannerMap } from "@/components/planner/PlannerMap";
 
 const Planner: React.FC = () => {
   const { preferences } = usePreferencesStore();
-  const [days, setDays] = useState<ItineraryDay[]>(DEMO_DAYS);
+  const { activeItinerary, addActivity, removeActivity, reorderActivities, addDay } = useItineraryStore();
+
+  const days = activeItinerary?.days || DEMO_DAYS;
+  // If usePreferencesStore exposes a budget, we'd use it here, otherwise fallback to activeItinerary or 40000
+  const totalBudget = activeItinerary?.totalBudget || 40000;
+
   const [selectedDay, setSelectedDay] = useState(0);
   const [mapVisible, setMapVisible] = useState(false);
-  const [totalBudget] = useState(40000);
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
@@ -43,7 +48,8 @@ const Planner: React.FC = () => {
         const oldIdx = acts.findIndex((a) => a.id === active.id);
         const newIdx = acts.findIndex((a) => a.id === over.id);
         if (oldIdx !== -1 && newIdx !== -1) {
-          setDays((prev) => prev.map((d, i) => (i === selectedDay ? { ...d, [slot]: arrayMove(acts, oldIdx, newIdx) } : d)));
+          const orderedActs = arrayMove(acts, oldIdx, newIdx);
+          reorderActivities(currentDay.id, slot, orderedActs.map(a => a.id));
           return;
         }
       }
@@ -52,7 +58,7 @@ const Planner: React.FC = () => {
   );
 
   const handleDelete = (dayId: string, slot: TimeSlot, actId: string) => {
-    setDays((prev) => prev.map((d) => (d.id === dayId ? { ...d, [slot]: d[slot].filter((a) => a.id !== actId) } : d)));
+    removeActivity(dayId, slot, actId);
     toast.success("Activity removed");
   };
 
@@ -71,13 +77,13 @@ const Planner: React.FC = () => {
       source: "ai",
       tags: ["AI Suggestion"],
     };
-    setDays((prev) => prev.map((d) => (d.id === dayId ? { ...d, [slot]: [...d[slot], demoFill] } : d)));
+    addActivity(dayId, slot, demoFill);
     analytics.dayAutoFilled(days.findIndex((d) => d.id === dayId) + 1);
     toast.success("Day auto-filled by Gemini!", { id: "autofill" });
   };
 
   const handleAddDay = () => {
-    setDays((prev) => [...prev, { id: generateId(), dayNumber: days.length + 1, morning: [], afternoon: [], evening: [] }]);
+    addDay();
     setSelectedDay(days.length);
     toast.success(`Day ${days.length + 1} added`);
   };

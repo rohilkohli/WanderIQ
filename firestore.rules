@@ -2,22 +2,21 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can only read/write their own profile
-    match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /users/{document} {
+      allow read, write: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
 
-      match /itineraries/{itineraryId} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
-      }
-      match /preferences/{prefId} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
-      }
-      match /checklist/{checkId} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
-      }
-      match /chatHistory/{chatId} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
-      }
+    match /itineraries/{document} {
+      allow read, write: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    match /preferences/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /checklist/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /chatHistory/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
     // Shared itineraries: role-based access
