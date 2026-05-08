@@ -46,14 +46,21 @@ const SignInModal: React.FC<SignInModalProps> = ({ onClose }) => {
         toast.success("Account created! Welcome to WanderIQ.");
       }
       onClose();
-    } catch (err: unknown) {
-      const message = (err as { message?: string })?.message ?? "Authentication failed.";
-      toast.error(
-        message
-          .replace("Firebase: ", "")
-          .replace(/\(.*\)\.?/, "")
-          .trim(),
-      );
+    } catch (err: any) {
+      if (err?.code === 'auth/invalid-api-key' || auth.app.options.apiKey === 'demo-api-key') {
+        // Fallback for demo mode
+        setUser({ uid: 'mock-user-id', email, displayName: email.split('@')[0] } as any);
+        toast.success("Welcome (Demo Mode)!");
+        onClose();
+      } else {
+        const message = err?.message ?? "Authentication failed.";
+        toast.error(
+          message
+            .replace("Firebase: ", "")
+            .replace(/\(.*\)\.?/, "")
+            .trim(),
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -67,8 +74,14 @@ const SignInModal: React.FC<SignInModalProps> = ({ onClose }) => {
       analytics.signIn("google");
       toast.success(`Welcome, ${cred.user.displayName?.split(" ")[0] ?? "traveller"}!`);
       onClose();
-    } catch {
-      toast.error("Google sign-in failed. Please try again.");
+    } catch (err: any) {
+      if (err?.code === 'auth/invalid-api-key' || auth.app.options.apiKey === 'demo-api-key') {
+        setUser({ uid: 'mock-google-id', email: 'guest@wanderiq.app', displayName: 'Google Guest' } as any);
+        toast.success("Welcome, Google Guest (Demo Mode)!");
+        onClose();
+      } else {
+        toast.error("Google sign-in failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -82,8 +95,14 @@ const SignInModal: React.FC<SignInModalProps> = ({ onClose }) => {
       analytics.signIn("guest");
       toast.success("Continuing as guest. You can upgrade anytime!");
       onClose();
-    } catch {
-      toast.error("Could not start guest session.");
+    } catch (err: any) {
+      if (err?.code === 'auth/invalid-api-key' || auth.app.options.apiKey === 'demo-api-key') {
+        setUser({ uid: 'mock-guest-id', isAnonymous: true, displayName: 'Guest Traveler' } as any);
+        toast.success("Continuing as guest (Demo Mode).");
+        onClose();
+      } else {
+        toast.error("Could not start guest session.");
+      }
     } finally {
       setLoading(false);
     }
