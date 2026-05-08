@@ -43,7 +43,7 @@ const Profile: React.FC = () => {
         <img src={user?.photoURL ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName ?? "Traveller")}&size=100&background=1B4332&color=fff`} alt={`${user?.displayName ?? "Your"} profile photo`} width={100} height={100} style={{ borderRadius: "50%", objectFit: "cover", border: "3px solid var(--color-accent)" }} />
         <div>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", marginBottom: "var(--space-1)" }}>{user?.displayName ?? "Traveller"}</h1>
-          <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>{user?.email ?? "guest@wanderiq.app"}</p>
+          <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-3)" }}>{user?.email ?? "guest@voyaiq.app"}</p>
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
             <button onClick={() => setEditing(!editing)} className={`btn btn-sm ${editing ? "btn-highlight" : "btn-secondary"}`}>
               {editing ? "✕ Cancel" : "✏️ Edit preferences"}

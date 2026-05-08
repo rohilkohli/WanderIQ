@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import { formatCurrency } from "@/lib/utils";
 import { getBudgetHealth } from "@/lib/budget";
 import toast from "react-hot-toast";
+import type { BudgetSuggestion } from "@/types";
 
 const DEMO_BUDGET = {
   total: 40000,
@@ -35,13 +36,14 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 // AI_SUGGESTIONS will be fetched from API
+type ApiBudgetSuggestion = Omit<BudgetSuggestion, "description"> & { desc: string };
 
 const Budget: React.FC = () => {
   const { breakdown, total } = DEMO_BUDGET;
   const spent = Object.values(breakdown).reduce((s, v) => s + v, 0);
   const pct = Math.round((spent / total) * 100);
   const health = getBudgetHealth(pct);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<ApiBudgetSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [appliedSuggestions, setApplied] = useState<string[]>([]);
 
@@ -66,8 +68,8 @@ const Budget: React.FC = () => {
         body: JSON.stringify({ destination: "Goa", breakdown, total }),
       });
       if (!res.ok) throw new Error("Failed to optimize budget");
-      const data = await res.json();
-      if (data.suggestions) {
+      const data = await res.json() as { suggestions?: ApiBudgetSuggestion[] };
+      if (Array.isArray(data.suggestions)) {
         setSuggestions(data.suggestions);
         toast.success("Budget optimized by Gemini AI!");
       }

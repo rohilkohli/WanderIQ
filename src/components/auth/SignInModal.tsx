@@ -50,7 +50,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ onClose }) => {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         setUser(cred.user);
         analytics.signUp("email");
-        toast.success("Account created! Welcome to WanderIQ.");
+        toast.success("Account created! Welcome to VoyaIQ.");
       }
       onClose();
     } catch (err: unknown) {
@@ -85,7 +85,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ onClose }) => {
     } catch (err: unknown) {
       const firebaseErr = err as FirebaseError;
       if (firebaseErr?.code === 'auth/invalid-api-key' || auth.app.options.apiKey === 'demo-api-key') {
-        setUser({ uid: 'mock-google-id', email: 'guest@wanderiq.app', displayName: 'Google Guest' } as User);
+        setUser({ uid: 'mock-google-id', email: 'guest@voyaiq.app', displayName: 'Google Guest' } as User);
         toast.success("Welcome, Google Guest (Demo Mode)!");
         onClose();
       } else {
@@ -134,7 +134,7 @@ const SignInModal: React.FC<SignInModalProps> = ({ onClose }) => {
             <h1 id="modal-title" style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", marginBottom: "var(--space-2)" }}>
               {tab === "signin" ? "Welcome back" : "Start exploring"}
             </h1>
-            <p style={{ color: "var(--color-text-muted)", fontSize: "0.9375rem" }}>{tab === "signin" ? "Sign in to your WanderIQ account" : "Create your free WanderIQ account"}</p>
+            <p style={{ color: "var(--color-text-muted)", fontSize: "0.9375rem" }}>{tab === "signin" ? "Sign in to your VoyaIQ account" : "Create your free VoyaIQ account"}</p>
           </div>
 
           {/* Tabs */}

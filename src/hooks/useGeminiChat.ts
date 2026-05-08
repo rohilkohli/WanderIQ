@@ -1,5 +1,5 @@
 // ============================================================
-// WanderIQ — Gemini Chat Hook
+// VoyaIQ — Gemini Chat Hook
 // ============================================================
 // All Gemini calls go through a Cloud Function proxy.
 // The API key NEVER touches the client.
@@ -19,7 +19,7 @@ async function getIdToken(): Promise<string> {
 }
 
 /**
- * React hook for managing state and communication with the Gemini 1.5 Flash AI model.
+ * React hook for managing state and communication with the Gemini 2.5 Flash AI model.
  * @param itineraryContext - Optional serialized itinerary data to provide context to the AI
  * @returns An object containing chat state, messages, and functions to send or clear messages
  */
@@ -100,6 +100,7 @@ export function useGeminiChat(itineraryContext?: string) {
           )
         );
       } catch {
+        setError('Live Gemini service is unavailable (network, configuration/API key, or temporary outage). Showing offline assistant response.');
         // Fallback demo response when Cloud Functions aren't deployed
         const demoResponse = getDemoResponse(text);
         setMessages((prev) =>
@@ -132,5 +133,5 @@ function getDemoResponse(query: string): string {
   if (lower.includes('budget') || lower.includes('cost') || lower.includes('cheaper')) {
     return `I can optimize your budget! Here are 3 swaps that save ~₹2,400 while preserving trip quality: 💰\n\n1. Replace **5-star hotel** on Day 2 with a **boutique guesthouse** → Save ₹1,200\n2. Take **metro** instead of cab on Day 3 → Save ₹400\n3. Visit the free **heritage walk** instead of paid tour → Save ₹800\n\nShall I apply these changes?`;
   }
-  return `I'm your WanderIQ AI assistant! 🗺️ I can help you:\n- **Replace** activities ("find something quieter for Day 2 morning")\n- **Discover** restaurants and attractions near your activities\n- **Navigate** between locations with traffic-aware routing\n- **Pack** smart based on your destination and activities\n- **Optimize** your budget with smart swaps\n\nWhat would you like to know about your trip?`;
+  return `I'm your VoyaIQ AI assistant! 🗺️ I can help you:\n- **Replace** activities ("find something quieter for Day 2 morning")\n- **Discover** restaurants and attractions near your activities\n- **Navigate** between locations with traffic-aware routing\n- **Pack** smart based on your destination and activities\n- **Optimize** your budget with smart swaps\n\nWhat would you like to know about your trip?`;
 }

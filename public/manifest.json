@@ -1,6 +1,6 @@
 {
-  "name": "WanderIQ — AI Travel Planning Engine",
-  "short_name": "WanderIQ",
+  "name": "VoyaIQ — AI Travel Planning Engine",
+  "short_name": "VoyaIQ",
   "description": "AI-powered travel planning engine that builds personalized multi-day itineraries.",
   "start_url": "/",
   "display": "standalone",

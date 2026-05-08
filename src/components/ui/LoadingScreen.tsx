@@ -6,7 +6,7 @@ interface LoadingScreenProps {
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ fullScreen }) => {
   return (
-    <div role="status" aria-label="Loading WanderIQ..." style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: fullScreen ? "100vh" : "auto", gap: "var(--space-4)", background: fullScreen ? "var(--color-bg)" : "transparent" }}>
+    <div role="status" aria-label="Loading VoyaIQ..." style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: fullScreen ? "100vh" : "auto", gap: "var(--space-4)", background: fullScreen ? "var(--color-bg)" : "transparent" }}>
       {/* Animated logo mark */}
       <div style={{ width: 56, height: 56, borderRadius: "var(--radius-lg)", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center", animation: "pulse 1.5s ease-in-out infinite" }}>
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
@@ -18,7 +18,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ fullScreen }) => {
 
       {fullScreen && (
         <>
-          <span style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 700, color: "var(--color-text-primary)", letterSpacing: "-0.02em" }}>WanderIQ</span>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 700, color: "var(--color-text-primary)", letterSpacing: "-0.02em" }}>VoyaIQ</span>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}>Planning your perfect journey…</p>
         </>
       )}

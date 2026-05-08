@@ -16,7 +16,7 @@ const WISHLIST = [
 ];
 
 const BADGES = [
-  { id: "first-trip", icon: "✈️", label: "First Trip Planned", desc: "Welcome to WanderIQ!", earned: true },
+  { id: "first-trip", icon: "✈️", label: "First Trip Planned", desc: "Welcome to VoyaIQ!", earned: true },
   { id: "three-trips", icon: "🗺️", label: "3 Trips Planned", desc: "You're a regular planner!", earned: true },
   { id: "budget-master", icon: "💰", label: "Budget Master", desc: "Stayed under budget 3x", earned: false },
   { id: "solo-traveler", icon: "🧍", label: "Solo Explorer", desc: "Planned your first solo trip", earned: false },
@@ -42,7 +42,6 @@ const Dashboard: React.FC = () => {
   const { setActiveItinerary } = useItineraryStore();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
-  const [loadingTrips, setLoadingTrips] = useState(false);
 
   const firstName = user?.displayName?.split(" ")[0] ?? "Traveller";
   const hour = new Date().getHours();
@@ -50,8 +49,7 @@ const Dashboard: React.FC = () => {
 
   /** Load real itineraries from Firestore for the signed-in user. */
   useEffect(() => {
-    if (!user?.uid) { setItineraries([]); return; }
-    setLoadingTrips(true);
+    if (!user?.uid) return;
     const q = query(
       collection(db, "itineraries"),
       where("ownerUid", "==", user.uid),
@@ -62,13 +60,14 @@ const Dashboard: React.FC = () => {
         const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Itinerary));
         setItineraries(docs);
       })
-      .catch(() => setItineraries([]))
-      .finally(() => setLoadingTrips(false));
+      .catch(() => setItineraries([]));
   }, [user?.uid]);
 
+  const visibleItineraries = user?.uid ? itineraries : [];
+
   const now = new Date().toISOString().split("T")[0];
-  const upcoming = itineraries.filter((t) => (t.dateRange?.end ?? "9999") >= now && t.status !== "completed");
-  const past = itineraries.filter((t) => (t.dateRange?.end ?? "9999") < now || t.status === "completed");
+  const upcoming = visibleItineraries.filter((t) => (t.dateRange?.end ?? "9999") >= now && t.status !== "completed");
+  const past = visibleItineraries.filter((t) => (t.dateRange?.end ?? "9999") < now || t.status === "completed");
 
   const handleNewTrip = () => {
     analytics.tripCreated("New Trip", 0);
@@ -140,12 +139,7 @@ const Dashboard: React.FC = () => {
 
           {/* Trip cards */}
           <section aria-label={`${tab} trips`}>
-            {loadingTrips && (
-              <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>
-                Loading your trips…
-              </div>
-            )}
-            {!loadingTrips && (tab === "upcoming" ? upcoming : past).length === 0 && (
+            {(tab === "upcoming" ? upcoming : past).length === 0 && (
               <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>
                 <div style={{ fontSize: "3rem", marginBottom: "var(--space-3)" }}>✈️</div>
                 <p style={{ fontWeight: 600 }}>No {tab} trips yet</p>

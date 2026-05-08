@@ -1,5 +1,5 @@
 // ============================================================
-// WanderIQ — Cloud Functions (Gemini AI Proxy)
+// VoyaIQ — Cloud Functions (Gemini AI Proxy)
 // ============================================================
 // NOTE: This file is kept for reference / future Firebase Functions
 // deployment. Active production proxy is server.mjs (Cloud Run).
@@ -14,7 +14,7 @@ import type { Request, Response } from 'express';
 admin.initializeApp();
 
 /** Travel assistant system prompt for the Gemini model. */
-const SYSTEM_PROMPT = `You are WanderIQ, an expert AI travel planning assistant.
+const SYSTEM_PROMPT = `You are VoyaIQ, an expert AI travel planning assistant.
 You help users discover destinations, build multi-day itineraries, and plan smart trips.
 You always consider the user's budget, dietary needs, mobility constraints, and travel style.
 Keep responses concise, structured, and actionable. Use markdown formatting where appropriate.

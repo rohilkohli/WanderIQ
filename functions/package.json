@@ -1,7 +1,7 @@
 {
-  "name": "wanderiq-functions",
+  "name": "voyaiq-functions",
   "version": "1.0.0",
-  "description": "WanderIQ Cloud Functions — Gemini AI proxy and Firestore triggers",
+  "description": "VoyaIQ Cloud Functions — Gemini AI proxy and Firestore triggers",
   "main": "lib/index.js",
   "engines": { "node": "20" },
   "scripts": {

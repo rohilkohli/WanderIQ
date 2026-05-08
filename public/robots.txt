@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://wanderiq-1091718102562.asia-south1.run.app/sitemap.xml
+Sitemap: https://voyaiq-1091718102562.asia-south1.run.app/sitemap.xml
