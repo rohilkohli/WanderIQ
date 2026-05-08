@@ -41,7 +41,7 @@ app.post('/api/chat', async (req, res) => {
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       systemInstruction: SYSTEM_PROMPT + (itineraryContext ? `\n\nCurrent itinerary:\n${itineraryContext}` : ''),
     });
 
@@ -110,7 +110,7 @@ Return ONLY the raw JSON array. No markdown fences.`;
 
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim()
       .replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '');
@@ -157,7 +157,7 @@ Return ONLY the raw JSON object. No markdown fences.`;
 
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim()
       .replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '');
@@ -204,7 +204,7 @@ Return ONLY the raw JSON array. No markdown fences.`;
 
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim()
       .replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '');
