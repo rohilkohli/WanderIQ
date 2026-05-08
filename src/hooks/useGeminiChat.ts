@@ -9,7 +9,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import type { ChatMessage } from '@/types';
 import { generateId } from '@/lib/utils';
 
-const FUNCTIONS_BASE = import.meta.env.VITE_FUNCTIONS_BASE_URL || 'http://localhost:5001/demo-project/us-central1';
+/** Same-origin API endpoint — Gemini key lives in Cloud Run env, never the browser. */
+const CHAT_ENDPOINT = '/api/chat';
 
 async function getIdToken(): Promise<string> {
   const { auth } = await import('@/firebase');
@@ -54,7 +55,7 @@ export function useGeminiChat(itineraryContext?: string) {
 
       try {
         const token = user ? await getIdToken() : '';
-        const response = await fetch(`${FUNCTIONS_BASE}/geminiChat`, {
+        const response = await fetch(CHAT_ENDPOINT, {
           method:  'POST',
           headers: {
             'Content-Type':  'application/json',

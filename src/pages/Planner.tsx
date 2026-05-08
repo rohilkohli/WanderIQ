@@ -9,9 +9,8 @@ import { analytics } from "@/lib/analytics";
 import type { ActivityCard, ItineraryDay, TimeSlot } from "@/types";
 import toast from "react-hot-toast";
 
-const FUNCTIONS_BASE =
-  import.meta.env.VITE_FUNCTIONS_BASE_URL ||
-  'https://us-central1-prompt-wars-in-person-gurugram.cloudfunctions.net';
+/** Same-origin Gemini API proxy endpoint. */
+const AUTOFILL_ENDPOINT = '/api/autofill';
 
 import { DEMO_DAYS } from "@/components/planner/demo-data";
 import { TimeBlock } from "@/components/planner/TimeBlock";
@@ -83,7 +82,7 @@ const Planner: React.FC = () => {
     const dayNumber = day?.dayNumber ?? 1;
 
     try {
-      const res = await fetch(`${FUNCTIONS_BASE}/geminiAutoFill`, {
+      const res = await fetch(AUTOFILL_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

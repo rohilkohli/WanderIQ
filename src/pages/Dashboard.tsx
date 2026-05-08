@@ -1,18 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
 import { usePreferencesStore } from "@/store/usePreferencesStore";
+import { useItineraryStore } from "@/store/useItineraryStore";
 import { analytics } from "@/lib/analytics";
-
-const UPCOMING_TRIPS = [
-  { id: "1", destination: "Goa, India", dates: "Jun 15 – Jun 22", days: 7, status: "active", emoji: "🏖️", match: 94 },
-  { id: "2", destination: "Rajasthan, India", dates: "Aug 10 – Aug 17", days: 7, status: "draft", emoji: "🏰", match: 88 },
-];
-
-const PAST_TRIPS = [
-  { id: "3", destination: "Ooty, Tamil Nadu", dates: "Mar 5 – Mar 9", days: 4, emoji: "🌿" },
-  { id: "4", destination: "Hampi, Karnataka", dates: "Jan 14 – Jan 18", days: 4, emoji: "🗿" },
-];
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { db } from "@/firebase";
+import type { Itinerary } from "@/types";
 
 const WISHLIST = [
   { name: "Iceland", emoji: "🌋", tag: "Adventure" },
@@ -28,20 +22,64 @@ const BADGES = [
   { id: "solo-traveler", icon: "🧍", label: "Solo Explorer", desc: "Planned your first solo trip", earned: false },
 ];
 
+const DEST_EMOJI: Record<string, string> = {
+  goa: "🏖️", rajasthan: "🏰", coorg: "🌿", andaman: "🏝️", varanasi: "🕌",
+  kerala: "🌴", himachal: "🏔️", mumbai: "🏙️", default: "🗺️",
+};
+
+function destEmoji(name: string): string {
+  const lower = name.toLowerCase();
+  for (const [key, emoji] of Object.entries(DEST_EMOJI)) {
+    if (lower.includes(key)) return emoji;
+  }
+  return DEST_EMOJI.default;
+}
+
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { preferences } = usePreferencesStore();
+  const { setActiveItinerary } = useItineraryStore();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
+  const [itineraries, setItineraries] = useState<Itinerary[]>([]);
+  const [loadingTrips, setLoadingTrips] = useState(false);
 
   const firstName = user?.displayName?.split(" ")[0] ?? "Traveller";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
+  /** Load real itineraries from Firestore for the signed-in user. */
+  useEffect(() => {
+    if (!user?.uid) { setItineraries([]); return; }
+    setLoadingTrips(true);
+    const q = query(
+      collection(db, "itineraries"),
+      where("ownerUid", "==", user.uid),
+      orderBy("updatedAt", "desc")
+    );
+    getDocs(q)
+      .then((snap) => {
+        const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Itinerary));
+        setItineraries(docs);
+      })
+      .catch(() => setItineraries([]))
+      .finally(() => setLoadingTrips(false));
+  }, [user?.uid]);
+
+  const now = new Date().toISOString().split("T")[0];
+  const upcoming = itineraries.filter((t) => (t.dateRange?.end ?? "9999") >= now && t.status !== "completed");
+  const past = itineraries.filter((t) => (t.dateRange?.end ?? "9999") < now || t.status === "completed");
+
   const handleNewTrip = () => {
     analytics.tripCreated("New Trip", 0);
     navigate("/discover");
   };
+
+  const openTrip = (trip: Itinerary) => {
+    setActiveItinerary(trip);
+    navigate("/planner");
+  };
+
 
   return (
     <div id="main-content" style={{ padding: "var(--space-8)", maxWidth: 1100, margin: "0 auto" }}>
@@ -102,33 +140,50 @@ const Dashboard: React.FC = () => {
 
           {/* Trip cards */}
           <section aria-label={`${tab} trips`}>
-            <ul  style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", listStyle: "none" }}>
-              {(tab === "upcoming" ? UPCOMING_TRIPS : PAST_TRIPS).map((trip) => (
-                <li key={trip.id} >
-                  <article className="card" style={{ padding: "var(--space-5)", display: "flex", alignItems: "center", gap: "var(--space-4)", cursor: "pointer" }} onClick={() => navigate(`/planner/${trip.id}`)} onKeyDown={(e) => e.key === "Enter" && navigate(`/planner/${trip.id}`)} tabIndex={0} aria-label={`${trip.destination} trip, ${trip.dates}`}>
-                    <div style={{ width: 64, height: 64, borderRadius: "var(--radius-lg)", background: "var(--color-surface-alt)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", flexShrink: 0 }} aria-hidden="true">
-                      {trip.emoji}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
-                        <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.125rem", fontWeight: 600 }}>{trip.destination}</h3>
-                        {"status" in trip && <span className={`badge ${"status" in trip && (trip as { status: string }).status === "active" ? "badge-accent" : "badge-muted"}`}>{(trip as { status: string }).status}</span>}
+            {loadingTrips && (
+              <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>
+                Loading your trips…
+              </div>
+            )}
+            {!loadingTrips && (tab === "upcoming" ? upcoming : past).length === 0 && (
+              <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>
+                <div style={{ fontSize: "3rem", marginBottom: "var(--space-3)" }}>✈️</div>
+                <p style={{ fontWeight: 600 }}>No {tab} trips yet</p>
+                <p style={{ fontSize: "0.875rem", marginTop: "var(--space-2)" }}>
+                  {tab === "upcoming" ? "Start by discovering your next destination!" : "Your completed trips will appear here."}
+                </p>
+                {tab === "upcoming" && (
+                  <button className="btn btn-primary" style={{ marginTop: "var(--space-4)" }} onClick={() => navigate("/discover")}>
+                    Discover Destinations →
+                  </button>
+                )}
+              </div>
+            )}
+            <ul style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", listStyle: "none" }}>
+              {(tab === "upcoming" ? upcoming : past).map((trip) => {
+                const destName = typeof trip.destination === "object" ? trip.destination.name : String(trip.destination);
+                const emoji = destEmoji(destName);
+                const dates = trip.dateRange ? `${trip.dateRange.start} – ${trip.dateRange.end}` : "Dates TBD";
+                return (
+                  <li key={trip.id}>
+                    <article className="card" style={{ padding: "var(--space-5)", display: "flex", alignItems: "center", gap: "var(--space-4)", cursor: "pointer" }} onClick={() => openTrip(trip)} onKeyDown={(e) => e.key === "Enter" && openTrip(trip)} tabIndex={0} aria-label={`${destName} trip, ${dates}`}>
+                      <div style={{ width: 64, height: 64, borderRadius: "var(--radius-lg)", background: "var(--color-surface-alt)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", flexShrink: 0 }} aria-hidden="true">
+                        {emoji}
                       </div>
-                      <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
-                        {trip.dates} · {trip.days} days
-                      </p>
-                    </div>
-                    {"match" in trip && (
-                      <div className="score-ring" aria-label={`${(trip as { match: number }).match}% match score`}>
-                        {(trip as { match: number }).match}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+                          <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.125rem", fontWeight: 600 }}>{destName}</h3>
+                          <span className={`badge ${trip.status === "active" ? "badge-accent" : "badge-muted"}`}>{trip.status}</span>
+                        </div>
+                        <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
+                          {dates} · {trip.days.length} day{trip.days.length !== 1 ? "s" : ""}
+                        </p>
                       </div>
-                    )}
-                    <span style={{ color: "var(--color-text-muted)", fontSize: "1.25rem" }} aria-hidden="true">
-                      ›
-                    </span>
-                  </article>
-                </li>
-              ))}
+                      <span style={{ color: "var(--color-text-muted)", fontSize: "1.25rem" }} aria-hidden="true">›</span>
+                    </article>
+                  </li>
+                );
+              })}
             </ul>
 
             {tab === "upcoming" && (
