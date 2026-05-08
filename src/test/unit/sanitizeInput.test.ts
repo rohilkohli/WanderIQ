@@ -21,7 +21,7 @@ describe('sanitizeInput', () => {
   });
   it('returns empty string for non-string input', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(sanitizeInput(null as any)).toBe('');
+    expect(sanitizeInput(null as unknown as string)).toBe('');
   });
   it('allows normal travel text', () => {
     const text = 'I want to visit Goa for 5 days with a vegetarian diet under ₹40,000';

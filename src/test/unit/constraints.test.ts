@@ -112,4 +112,25 @@ describe('validateDay', () => {
     const violations = validateDay(day, { minTransitMin: 15 });
     expect(violations.filter((v) => v.type === 'overlap')).toHaveLength(0);
   });
+
+  it('detects overlap, budget, and accessibility in validateDay', () => {
+    const day: ItineraryDay = {
+      id: 'd2', dayNumber: 2,
+      morning: [
+        mockActivity({ id: 'a1', name: 'A', startTime: '09:00', endTime: '11:00', estimatedCost: 50, isWheelchairAccessible: false }),
+        mockActivity({ id: 'a2', name: 'B', startTime: '10:00', endTime: '12:00', estimatedCost: 150 })
+      ],
+      afternoon: [], evening: []
+    };
+    const violations = validateDay(day, { minTransitMin: 15, dailyBudgetLimit: 100, mobilityNeed: 'wheelchair' });
+    
+    const overlap = violations.find(v => v.type === 'overlap');
+    expect(overlap).toBeDefined();
+    
+    const budget = violations.find(v => v.type === 'budget');
+    expect(budget).toBeDefined();
+
+    const access = violations.find(v => v.type === 'accessibility');
+    expect(access).toBeDefined();
+  });
 });

@@ -3,7 +3,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { sumBudget, getDailyBudget, getCategoryPercentage, getBudgetHealth } from '@/lib/budget';
+import { sumBudget, getDailyBudget, getCategoryPercentage, getBudgetHealth, calculateEstimatedSpend, getBudgetSummary } from '@/lib/budget';
 import type { BudgetBreakdown } from '@/types';
 
 const SAMPLE_BREAKDOWN: BudgetBreakdown = {
@@ -60,5 +60,37 @@ describe('getBudgetHealth', () => {
   it('returns danger for > 90%', () => {
     expect(getBudgetHealth(95)).toBe('danger');
     expect(getBudgetHealth(100)).toBe('danger');
+  });
+});
+
+describe('calculateEstimatedSpend & getBudgetSummary', () => {
+  const dummyItinerary: any = {
+    totalBudget: 10000,
+    budget: { flights: 1000, accommodation: 2000, food: 0, activities: 0, transport: 0, miscellaneous: 0 },
+    days: [
+      {
+        morning: [{ estimatedCost: 500 }],
+        afternoon: [{ estimatedCost: 200 }],
+        evening: []
+      },
+      {
+        morning: [],
+        afternoon: [{ estimatedCost: 1000 }],
+        evening: [{ estimatedCost: 300 }]
+      }
+    ]
+  };
+
+  it('calculates estimated spend correctly', () => {
+    expect(calculateEstimatedSpend(dummyItinerary)).toBe(2000);
+  });
+
+  it('calculates budget summary correctly', () => {
+    const summary = getBudgetSummary(dummyItinerary);
+    expect(summary.total).toBe(10000);
+    expect(summary.spent).toBe(3000); // max of sumBudget(3000) and estimatedSpend(2000)
+    expect(summary.remaining).toBe(7000);
+    expect(summary.percentage).toBe(30);
+    expect(summary.isOver).toBe(false);
   });
 });

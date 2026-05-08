@@ -18,9 +18,9 @@
   --color-accent-hover: #163D2D;
   --color-highlight:    #E76F51;
   --color-highlight-hover: #CF6344;
-  --color-text-primary: #1A1A18;
-  --color-text-muted:   #6B6560;
-  --color-text-light:   #9A9690;
+  --color-text-primary: #000000;
+  --color-text-muted:   #000000;
+  --color-text-light:   #000000;
   --color-map-overlay:  rgba(27, 67, 50, 0.08);
   --color-success:      #2D6A4F;
   --color-warning:      #E9C46A;
@@ -93,9 +93,9 @@
   --color-accent-hover: #62C798;
   --color-highlight:    #E76F51;
   --color-highlight-hover: #F28070;
-  --color-text-primary: #F0EDE5;
-  --color-text-muted:   #9A9690;
-  --color-text-light:   #6B6560;
+  --color-text-primary: #FFFFFF;
+  --color-text-muted:   #FFFFFF;
+  --color-text-light:   #FFFFFF;
   --color-map-overlay:  rgba(82, 183, 136, 0.08);
   --color-success:      #52B788;
   --color-warning:      #E9C46A;
