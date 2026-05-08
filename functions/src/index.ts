@@ -6,6 +6,7 @@
 // ============================================================
 
 import * as functions from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { GoogleGenerativeAI, type Part } from '@google/generative-ai';
 import * as admin from 'firebase-admin';
 import type { Request, Response } from 'express';
@@ -64,7 +65,7 @@ export const geminiChat = functions.onRequest(
       try {
         await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
       } catch {
-        functions.logger.info('Unauthenticated chat request (guest mode)');
+        logger.info('Unauthenticated chat request (guest mode)');
       }
     }
 
@@ -116,7 +117,7 @@ export const geminiChat = functions.onRequest(
       }
       res.end();
     } catch (err) {
-      functions.logger.error('Gemini chat error:', err);
+      logger.error('Gemini chat error:', err);
       res.status(500).json({ error: 'AI service temporarily unavailable' });
     }
   }
@@ -186,7 +187,7 @@ Return ONLY the raw JSON array. No markdown fences.`;
       const destinations = JSON.parse(text) as unknown[];
       res.json({ destinations });
     } catch (err) {
-      functions.logger.error('Gemini discover error:', err);
+      logger.error('Gemini discover error:', err);
       res.status(500).json({ error: 'AI discovery service temporarily unavailable' });
     }
   }
@@ -257,7 +258,7 @@ Return ONLY the raw JSON object. No markdown fences.`;
       const activity = JSON.parse(text) as unknown;
       res.json({ activity });
     } catch (err) {
-      functions.logger.error('Gemini auto-fill error:', err);
+      logger.error('Gemini auto-fill error:', err);
       res.status(500).json({ error: 'AI auto-fill service temporarily unavailable' });
     }
   }

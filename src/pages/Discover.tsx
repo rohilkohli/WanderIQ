@@ -77,7 +77,7 @@ const Discover: React.FC = () => {
                 <article key={dest.id} className="card" role="listitem" style={{ overflow: "hidden", cursor: "pointer" }} onClick={() => handleSelectDestination(dest)} onKeyDown={(e) => e.key === "Enter" && handleSelectDestination(dest)} tabIndex={0} aria-label={`${dest.name}, ${dest.country}. Match score: ${dest.matchScore}%`}>
                   {/* Hero image */}
                   <div style={{ position: "relative", height: 200, overflow: "hidden" }}>
-                    <img src={dest.heroImageUrl} alt={`${dest.name}, ${dest.country}`} width={400} height={200} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform var(--transition-slow)" }} onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")} onMouseLeave={(e) => (e.currentTarget.style.transform = "")} />
+                    <img src={dest.heroImageUrl} alt={`${dest.name}, ${dest.country}`} width={400} height={200} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform var(--transition-slow)" }} onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")} onMouseLeave={(e) => (e.currentTarget.style.transform = "")} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://loremflickr.com/800/600/${encodeURIComponent(dest.name.split(' ')[0].replace(/[^a-zA-Z]/g, ''))},city,travel/all`; }} />
                     {/* Match score overlay */}
                     <div style={{ position: "absolute", top: "var(--space-3)", right: "var(--space-3)", background: "rgba(0,0,0,0.7)", borderRadius: "var(--radius-full)", padding: "var(--space-1) var(--space-3)", color: "white", fontSize: "0.8125rem", fontWeight: 700 }}>{dest.matchScore}% match</div>
                     {/* Climate badge */}
@@ -154,7 +154,7 @@ const Discover: React.FC = () => {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-6)" }} aria-label="Destination comparison">
               {compareDestinations.map((dest) => (
                 <article key={dest.id} className="card" style={{ overflow: "hidden" }}>
-                  <img src={dest.heroImageUrl} alt={dest.name} width={600} height={240} loading="lazy" style={{ width: "100%", height: 240, objectFit: "cover" }} />
+                  <img src={dest.heroImageUrl} alt={dest.name} width={600} height={240} loading="lazy" style={{ width: "100%", height: 240, objectFit: "cover" }} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://loremflickr.com/800/600/${encodeURIComponent(dest.name.split(' ')[0].replace(/[^a-zA-Z]/g, ''))},city,travel/all`; }} />
                   <div style={{ padding: "var(--space-5)" }}>
                     <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", marginBottom: "var(--space-2)" }}>{dest.name}</h3>
                     {[
