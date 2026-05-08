@@ -14,6 +14,13 @@ import { TimeBlock } from "@/components/planner/TimeBlock";
 import { ConstraintBanner } from "@/components/planner/ConstraintBanner";
 import { PlannerMap } from "@/components/planner/PlannerMap";
 
+/**
+ * The main Planner page for WanderIQ.
+ *
+ * Renders a multi-day drag-and-drop itinerary editor backed by
+ * {@link useItineraryStore} and {@link usePreferencesStore}. Includes
+ * constraint validation, AI auto-fill, budget tracking, and map view.
+ */
 const Planner: React.FC = () => {
   const { preferences } = usePreferencesStore();
   const { activeItinerary, addActivity, removeActivity, reorderActivities, addDay } = useItineraryStore();

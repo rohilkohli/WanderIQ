@@ -18,6 +18,12 @@ const NAV_ITEMS = [
   { to: "/profile", icon: "👤", label: "Profile" },
 ];
 
+/**
+ * Root application shell providing the persistent navigation sidebar,
+ * topbar, sign-in modal, AI chat drawer, and dark-mode toggle.
+ * Renders child routes via React Router's {@link Outlet}.
+ * Also mounts {@link useSyncItinerary} for automatic Firestore sync.
+ */
 const AppShell: React.FC = () => {
   const { user } = useAuthStore();
   const { isDark, toggleDark } = usePreferencesStore();

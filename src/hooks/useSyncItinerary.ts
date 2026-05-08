@@ -3,6 +3,17 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { useItineraryStore } from '@/store/useItineraryStore';
 
+/**
+ * Custom React hook that automatically persists the active itinerary to Firestore.
+ *
+ * Watches {@link useItineraryStore}'s `isDirty` flag. When dirty, waits 1500ms
+ * (debounce) then writes the full `activeItinerary` document to the `itineraries`
+ * Firestore collection and calls `setIsDirty(false)` on success.
+ *
+ * @example
+ * // In AppShell.tsx
+ * useSyncItinerary();
+ */
 export const useSyncItinerary = () => {
   const { isDirty, activeItinerary, setIsDirty } = useItineraryStore();
 

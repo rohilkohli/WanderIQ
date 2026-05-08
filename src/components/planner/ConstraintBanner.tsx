@@ -1,10 +1,19 @@
 import React from "react";
 import { validateDay } from "@/lib/constraints";
 
+/**
+ * Props for the {@link ConstraintBanner} component.
+ * @property violations - Array of constraint violations to display.
+ */
 export interface ConstraintBannerProps {
   violations: ReturnType<typeof validateDay>;
 }
 
+/**
+ * Renders an accessible alert banner listing itinerary constraint violations.
+ * Returns null when there are no violations.
+ * @param props - {@link ConstraintBannerProps}
+ */
 export const ConstraintBanner: React.FC<ConstraintBannerProps> = ({ violations }) => {
   if (violations.length === 0) return null;
   return (

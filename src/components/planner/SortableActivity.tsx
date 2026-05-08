@@ -5,6 +5,13 @@ import { formatCurrency } from "@/lib/utils";
 import type { ActivityCard, TimeSlot } from "@/types";
 import { CATEGORY_ICONS, CATEGORY_COLORS } from "./constants";
 
+/**
+ * Props for the {@link SortableActivity} component.
+ * @property activity - The activity card data to render.
+ * @property dayId - Parent itinerary day ID.
+ * @property slot - The time slot this activity belongs to.
+ * @property onDelete - Callback invoked when the user removes the activity.
+ */
 export interface SortableActivityProps {
   activity: ActivityCard;
   dayId: string;
@@ -12,6 +19,11 @@ export interface SortableActivityProps {
   onDelete: (dayId: string, slot: TimeSlot, id: string) => void;
 }
 
+/**
+ * A drag-and-drop sortable activity card using dnd-kit.
+ * Displays category icon, name, duration, cost, and accessibility badge.
+ * @param props - {@link SortableActivityProps}
+ */
 export const SortableActivity: React.FC<SortableActivityProps> = ({ activity, dayId, slot, onDelete }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: activity.id });
   const style = {

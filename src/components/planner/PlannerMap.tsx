@@ -2,10 +2,18 @@ import React from "react";
 import type { ItineraryDay } from "@/types";
 import { CATEGORY_COLORS, CATEGORY_ICONS } from "./constants";
 
+/** Props for the {@link PlannerMap} component. */
 export interface PlannerMapProps {
+  /** The currently selected itinerary day to display activity markers for. */
   currentDay?: ItineraryDay;
 }
 
+/**
+ * Renders a Google Maps-backed activity map for the current itinerary day.
+ * Shows pinned markers per activity with category colors and a screen-reader
+ * accessible activity list for WCAG 2 AA compliance.
+ * @param props - {@link PlannerMapProps}
+ */
 export const PlannerMap: React.FC<PlannerMapProps> = ({ currentDay }) => {
   return (
     <div role="application" aria-label="Trip map showing your itinerary locations" style={{ background: "var(--color-surface-alt)", borderLeft: "1px solid var(--color-border)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "var(--space-4)", overflowY: "auto" }}>

@@ -3,6 +3,15 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import type { ActivityCard, TimeSlot } from "@/types";
 import { SortableActivity } from "./SortableActivity";
 
+/**
+ * Props for the {@link TimeBlock} component.
+ * @property label - Human-readable slot label (e.g. "Morning").
+ * @property slot - The time-of-day slot key.
+ * @property activities - List of activities in this slot.
+ * @property dayId - ID of the parent itinerary day.
+ * @property onDelete - Callback to remove an activity.
+ * @property onAutoFill - Callback to AI auto-fill the slot.
+ */
 export interface TimeBlockProps {
   label: string;
   slot: TimeSlot;
@@ -12,6 +21,11 @@ export interface TimeBlockProps {
   onAutoFill: (dayId: string, slot: TimeSlot) => void;
 }
 
+/**
+ * Renders a sortable, accessible time-of-day block for an itinerary day.
+ * Uses dnd-kit SortableContext for drag-and-drop reordering.
+ * @param props - {@link TimeBlockProps}
+ */
 export const TimeBlock: React.FC<TimeBlockProps> = ({ label, slot, activities, dayId, onDelete, onAutoFill }) => {
   const slotTimes: Record<TimeSlot, string> = {
     morning: "6:00 – 12:00",
