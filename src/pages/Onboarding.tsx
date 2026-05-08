@@ -71,7 +71,7 @@ const Onboarding: React.FC = () => {
               <circle cx="16" cy="16" r="3" fill="white" />
             </svg>
           </div>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.25rem" }}>WanderIQ</span>
+          <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.25rem" }}>VoyaIQ</span>
         </div>
 
         {/* Step Progress */}
@@ -240,7 +240,7 @@ const Onboarding: React.FC = () => {
               </span>
               <div>
                 <p style={{ fontWeight: 700, color: "var(--color-accent)", marginBottom: "var(--space-1)" }}>You're all set!</p>
-                <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)", lineHeight: 1.5 }}>WanderIQ will use these preferences to personalise every AI recommendation, destination match score, and itinerary suggestion. You can update them anytime from your profile.</p>
+                <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)", lineHeight: 1.5 }}>VoyaIQ will use these preferences to personalise every AI recommendation, destination match score, and itinerary suggestion. You can update them anytime from your profile.</p>
               </div>
             </div>
           </div>

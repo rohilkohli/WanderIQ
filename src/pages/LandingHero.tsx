@@ -54,7 +54,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ moodQuery, setMoodQuer
           Plan trips that <span style={{ fontStyle: "italic", background: "linear-gradient(135deg, var(--color-accent) 0%, var(--color-highlight) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>actually know you</span>
         </h1>
 
-        <p style={{ fontSize: "clamp(1.0625rem, 2vw, 1.25rem)", color: "var(--color-text-muted)", lineHeight: 1.7, marginBottom: "var(--space-8)", animation: "fadeInUp 500ms ease-out 200ms both" }}>WanderIQ builds AI-powered multi-day itineraries tuned to your budget, diet, mobility, and travel style — with live weather, traffic routing, and collaborative planning baked in.</p>
+        <p style={{ fontSize: "clamp(1.0625rem, 2vw, 1.25rem)", color: "var(--color-text-muted)", lineHeight: 1.7, marginBottom: "var(--space-8)", animation: "fadeInUp 500ms ease-out 200ms both" }}>VoyaIQ builds AI-powered multi-day itineraries tuned to your budget, diet, mobility, and travel style — with live weather, traffic routing, and collaborative planning baked in.</p>
 
         {/* Mood search CTA */}
         <form onSubmit={handleMoodSearch} style={{ animation: "fadeInUp 500ms ease-out 300ms both" }} aria-label="Trip mood search">

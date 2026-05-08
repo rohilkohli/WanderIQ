@@ -1,5 +1,5 @@
 // ============================================================
-// WanderIQ — GA4 Analytics Helpers
+// VoyaIQ — GA4 Analytics Helpers
 // ============================================================
 
 declare global {
@@ -18,7 +18,7 @@ export const trackEvent = (eventName: string, params: Record<string, unknown> = 
   try {
     window.gtag?.('event', eventName, {
       ...params,
-      app_name: 'WanderIQ',
+      app_name: 'VoyaIQ',
       timestamp: new Date().toISOString(),
     });
   } catch {
@@ -27,7 +27,7 @@ export const trackEvent = (eventName: string, params: Record<string, unknown> = 
 };
 
 /**
- * Typed wrapper for tracking specific WanderIQ events.
+ * Typed wrapper for tracking specific VoyaIQ events.
  * @param destination - The destination name
  * @param durationDays - Trip duration
  * @returns void

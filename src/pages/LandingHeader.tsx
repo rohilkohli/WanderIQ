@@ -20,7 +20,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ user, setShowSignI
             <circle cx="16" cy="16" r="3" fill="white" />
           </svg>
         </div>
-        <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.25rem", color: "var(--color-text-primary)" }}>WanderIQ</span>
+        <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.25rem", color: "var(--color-text-primary)" }}>VoyaIQ</span>
       </div>
 
       <nav aria-label="Main navigation" style={{ flex: 1, display: "flex", justifyContent: "center", gap: "var(--space-6)" }}>

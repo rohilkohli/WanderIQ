@@ -16,7 +16,7 @@ const WISHLIST = [
 ];
 
 const BADGES = [
-  { id: "first-trip", icon: "✈️", label: "First Trip Planned", desc: "Welcome to WanderIQ!", earned: true },
+  { id: "first-trip", icon: "✈️", label: "First Trip Planned", desc: "Welcome to VoyaIQ!", earned: true },
   { id: "three-trips", icon: "🗺️", label: "3 Trips Planned", desc: "You're a regular planner!", earned: true },
   { id: "budget-master", icon: "💰", label: "Budget Master", desc: "Stayed under budget 3x", earned: false },
   { id: "solo-traveler", icon: "🧍", label: "Solo Explorer", desc: "Planned your first solo trip", earned: false },

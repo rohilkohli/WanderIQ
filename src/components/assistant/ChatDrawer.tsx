@@ -122,7 +122,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ onClose, itineraryContext }) =>
               {isLoading ? <span style={{ display: "block", width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white", borderRadius: "50%", animation: "spin 1s linear infinite" }} /> : "↑"}
             </button>
           </div>
-          <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "var(--space-2)", textAlign: "center" }}>Powered by Gemini 1.5 Flash · Press Enter to send</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "var(--space-2)", textAlign: "center" }}>Powered by Gemini 2.5 Flash · Press Enter to send</p>
         </div>
       </aside>
     </>
@@ -131,7 +131,13 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ onClose, itineraryContext }) =>
 
 /** Very simple markdown-to-HTML for bold and line breaks */
 function formatMarkdown(text: string): string {
-  return text
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+  return escaped
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.*?)\*/g, "<em>$1</em>")
     .replace(/\n/g, "<br/>");

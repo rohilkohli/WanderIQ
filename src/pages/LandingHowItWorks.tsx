@@ -15,8 +15,8 @@ export const LandingHowItWorks: React.FC = () => {
           {[
             {
               step: "01",
-              title: "Tell WanderIQ your dream",
-              desc: "Type a mood, budget, travel style, and duration. Set dietary needs, mobility requirements, and group size. WanderIQ builds your traveller profile once — uses it everywhere.",
+              title: "Tell VoyaIQ your dream",
+              desc: "Type a mood, budget, travel style, and duration. Set dietary needs, mobility requirements, and group size. VoyaIQ builds your traveller profile once — uses it everywhere.",
               icon: "🎯",
             },
             {

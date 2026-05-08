@@ -46,7 +46,7 @@ const AppShell: React.FC = () => {
   return (
     <div className="app-shell" style={{ minHeight: "100vh" }}>
       {/* Top Bar */}
-      <header className="app-topbar" role="banner" aria-label="WanderIQ top navigation">
+      <header className="app-topbar" role="banner" aria-label="VoyaIQ top navigation">
         <NavLink to="/dashboard" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", textDecoration: "none" }}>
           <div style={{ width: 36, height: 36, background: "var(--color-accent)", borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true">
@@ -54,7 +54,7 @@ const AppShell: React.FC = () => {
               <circle cx="16" cy="16" r="3" fill="white" />
             </svg>
           </div>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.25rem", color: "var(--color-text-primary)" }}>WanderIQ</span>
+          <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.25rem", color: "var(--color-text-primary)" }}>VoyaIQ</span>
         </NavLink>
 
         <div style={{ flex: 1 }} />

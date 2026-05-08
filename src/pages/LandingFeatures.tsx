@@ -11,7 +11,7 @@ export const LandingFeatures: React.FC = () => {
         <h2 id="features-heading" style={{ marginBottom: "var(--space-4)" }}>
           Everything you need to travel brilliantly
         </h2>
-        <p style={{ color: "var(--color-text-muted)", maxWidth: 520, margin: "0 auto", fontSize: "1.0625rem" }}>From AI destination discovery to real-time collaboration — WanderIQ handles every layer of trip planning.</p>
+        <p style={{ color: "var(--color-text-muted)", maxWidth: 520, margin: "0 auto", fontSize: "1.0625rem" }}>From AI destination discovery to real-time collaboration — VoyaIQ handles every layer of trip planning.</p>
       </header>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "var(--space-6)" }} className="stagger">

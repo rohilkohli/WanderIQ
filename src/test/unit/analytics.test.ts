@@ -11,7 +11,7 @@ describe('analytics', () => {
     trackEvent('test_event', { foo: 'bar' });
     expect(window.gtag).toHaveBeenCalledWith('event', 'test_event', expect.objectContaining({
       foo: 'bar',
-      app_name: 'WanderIQ',
+      app_name: 'VoyaIQ',
       timestamp: expect.any(String)
     }));
   });

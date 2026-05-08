@@ -1,6 +1,6 @@
-# WanderIQ 🏖️
+# VoyaIQ 🏖️
 
-WanderIQ is an AI-powered travel planning and experience engine that helps users discover destinations, assemble multi-day trip itineraries, and apply personal constraints in real-time. Built specifically for the HACK2SKILL PromptWars In-Person hackathon.
+VoyaIQ is an AI-powered travel planning and experience engine that helps users discover destinations, assemble multi-day trip itineraries, and apply personal constraints in real-time. Built specifically for the HACK2SKILL PromptWars In-Person hackathon.
 
 ## 🌟 Key Features
 - **AI Destination Discovery:** Get tailored destination recommendations based on mood and preferences.
@@ -17,7 +17,7 @@ graph TD
     UI --> Stores[(Zustand State Stores)]
     Stores --> Components[React Components]
     
-    Components -- Prompting --> Gemini[Gemini 1.5 Flash API]
+    Components -- Prompting --> Gemini[Gemini 2.5 Flash API]
     Components -- Geocoding/Images --> GooglePlaces[Google Places API]
     Components -- Weather --> OpenMeteo[OpenMeteo API]
     
@@ -65,4 +65,4 @@ VITE_FIREBASE_APP_ID=your_app_id
 3. Open `http://localhost:3000`
 
 ## 🐳 Deployment
-WanderIQ is containerized using a multi-stage Docker build and deployed via Google Cloud Run. Run `npm run build` to generate the production bundle.
+VoyaIQ is containerized using a multi-stage Docker build and deployed via Google Cloud Run. Run `npm run build` to generate the production bundle.
