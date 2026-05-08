@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
-import { useAuthStore } from '@/store/useAuthStore';
 import type {
   BudgetTier, TravelStyle, DietaryRestriction,
   MobilityNeed, GroupType, AccommodationType, TransportType, Interest,
@@ -47,7 +46,6 @@ const INTERESTS: { value: Interest; label: string; emoji: string }[] = [
 const Onboarding: React.FC = () => {
   const navigate = useNavigate();
   const { preferences, setPreferences } = usePreferencesStore();
-  const { user } = useAuthStore();
   const [step, setStep] = useState(1);
 
   const toggle = <T,>(arr: T[], val: T): T[] =>

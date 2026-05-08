@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { usePreferencesStore } from '@/store/usePreferencesStore';
+
 import { analytics } from '@/lib/analytics';
 import { sanitizeInput } from '@/lib/utils';
 import type { DestinationResult } from '@/types';
@@ -95,20 +95,11 @@ const CONDITION_BG: Record<string, string> = {
 const Discover: React.FC = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { preferences } = usePreferencesStore();
-
   const [moodQuery, setMoodQuery] = useState(params.get('mood') ?? '');
-  const [searchQuery, setSearchQuery] = useState('');
   const [destinations, setDestinations] = useState<DestinationResult[]>([]);
   const [loading, setLoading]           = useState(false);
   const [view, setView]                 = useState<'grid' | 'compare'>('grid');
   const [compareIds, setCompareIds]     = useState<string[]>([]);
-
-  // Auto-run search if mood param present
-  useEffect(() => {
-    if (params.get('mood')) handleMoodSearch();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleMoodSearch = async () => {
     const q = sanitizeInput(moodQuery);
@@ -123,6 +114,15 @@ const Discover: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Auto-run search if mood param present
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (params.get('mood')) handleMoodSearch();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
 
   const handleSelectDestination = (dest: DestinationResult) => {
     analytics.destinationSelected(dest.name, dest.matchScore);

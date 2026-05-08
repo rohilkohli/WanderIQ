@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import SignInModal from '@/components/auth/SignInModal';
 
@@ -55,19 +54,9 @@ const STATS = [
 
 const Landing: React.FC = () => {
   const navigate   = useNavigate();
-  const { isDark } = usePreferencesStore();
   const { user }   = useAuthStore();
   const [showSignIn, setShowSignIn] = useState(false);
   const [moodQuery, setMoodQuery]   = useState('');
-  const [activeDestIdx, setActiveDestIdx] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveDestIdx((i) => (i + 1) % DESTINATIONS.length);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, []);
-
   const handleCTA = () => {
     if (user) navigate('/dashboard');
     else setShowSignIn(true);

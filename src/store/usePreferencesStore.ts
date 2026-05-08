@@ -19,14 +19,35 @@ const defaultPreferences: UserPreferences = {
   blacklist:     [],
 };
 
-interface PreferencesState {
+/**
+ * The shape of the global preferences state.
+ * @returns The PreferencesState object
+ */
+export interface PreferencesState {
   preferences: UserPreferences;
   isDark:      boolean;
+  /**
+   * Update specific user preferences.
+   * @param prefs - Partial preferences object to merge
+   * @returns void
+   */
   setPreferences: (prefs: Partial<UserPreferences>) => void;
+  /**
+   * Toggle the global dark mode state.
+   * @returns void
+   */
   toggleDark:     () => void;
+  /**
+   * Reset preferences to their default values.
+   * @returns void
+   */
   reset:          () => void;
 }
 
+/**
+ * Global Zustand store for persisting user preferences and theme state.
+ * @returns The React hook for accessing the PreferencesState
+ */
 export const usePreferencesStore = create<PreferencesState>()(
   devtools(
     persist(

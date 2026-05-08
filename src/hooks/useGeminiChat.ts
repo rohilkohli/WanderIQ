@@ -17,6 +17,11 @@ async function getIdToken(): Promise<string> {
   return token ?? '';
 }
 
+/**
+ * React hook for managing state and communication with the Gemini 1.5 Flash AI model.
+ * @param itineraryContext - Optional serialized itinerary data to provide context to the AI
+ * @returns An object containing chat state, messages, and functions to send or clear messages
+ */
 export function useGeminiChat(itineraryContext?: string) {
   const user = useAuthStore((s) => s.user);
   const [messages, setMessages]   = useState<ChatMessage[]>([]);
@@ -93,7 +98,7 @@ export function useGeminiChat(itineraryContext?: string) {
             m.id === assistantMsg.id ? { ...m, isStreaming: false } : m
           )
         );
-      } catch (err) {
+      } catch {
         // Fallback demo response when Cloud Functions aren't deployed
         const demoResponse = getDemoResponse(text);
         setMessages((prev) =>

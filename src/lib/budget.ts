@@ -4,6 +4,10 @@
 
 import type { Itinerary, BudgetBreakdown } from '@/types';
 
+/**
+ * Represents a comprehensive summary of itinerary budget metrics.
+ * @returns The BudgetSummary object
+ */
 export interface BudgetSummary {
   total:      number;
   breakdown:  BudgetBreakdown;
@@ -15,6 +19,8 @@ export interface BudgetSummary {
 
 /**
  * Calculate the total budget from a breakdown.
+ * @param breakdown - The object containing categorical budget allocations
+ * @returns The sum of all category budgets
  */
 export function sumBudget(breakdown: BudgetBreakdown): number {
   return Object.values(breakdown).reduce((sum, val) => sum + (val || 0), 0);
@@ -22,6 +28,8 @@ export function sumBudget(breakdown: BudgetBreakdown): number {
 
 /**
  * Calculate estimated spend from itinerary activities.
+ * @param itinerary - The itinerary object containing all scheduled activities
+ * @returns The sum of all estimated costs across all activities
  */
 export function calculateEstimatedSpend(itinerary: Itinerary): number {
   return itinerary.days.reduce((total, day) => {
@@ -32,6 +40,8 @@ export function calculateEstimatedSpend(itinerary: Itinerary): number {
 
 /**
  * Get a full budget summary.
+ * @param itinerary - The itinerary object to analyze
+ * @returns A BudgetSummary object containing calculated metrics
  */
 export function getBudgetSummary(itinerary: Itinerary): BudgetSummary {
   const total = itinerary.totalBudget;
@@ -53,6 +63,9 @@ export function getBudgetSummary(itinerary: Itinerary): BudgetSummary {
 
 /**
  * Get daily budget (total / days).
+ * @param totalBudget - The total allocated budget
+ * @param days - The duration of the trip in days
+ * @returns The computed daily budget average
  */
 export function getDailyBudget(totalBudget: number, days: number): number {
   if (days === 0) return 0;
@@ -61,6 +74,9 @@ export function getDailyBudget(totalBudget: number, days: number): number {
 
 /**
  * Percentage of budget used per category.
+ * @param categoryAmount - The amount allocated to a specific category
+ * @param totalBudget - The total itinerary budget
+ * @returns The percentage (0-100) of the total budget represented by the category amount
  */
 export function getCategoryPercentage(
   categoryAmount: number,
@@ -72,6 +88,8 @@ export function getCategoryPercentage(
 
 /**
  * Budget health level.
+ * @param percentage - The percentage of budget consumed
+ * @returns 'good' if <= 70, 'warning' if <= 90, otherwise 'danger'
  */
 export function getBudgetHealth(percentage: number): 'good' | 'warning' | 'danger' {
   if (percentage <= 70) return 'good';

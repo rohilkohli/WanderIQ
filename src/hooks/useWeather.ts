@@ -59,7 +59,11 @@ async function fetchWeather(lat: number, lng: number, startDate: string, endDate
   });
 }
 
-interface UseWeatherOptions {
+/**
+ * Configuration options for the useWeather hook.
+ * @returns The UseWeatherOptions object
+ */
+export interface UseWeatherOptions {
   lat:       number;
   lng:       number;
   startDate: string;
@@ -67,6 +71,11 @@ interface UseWeatherOptions {
   enabled?:  boolean;
 }
 
+/**
+ * React Query hook to fetch and cache daily weather forecasts from OpenMeteo.
+ * @param options - The location and date range parameters for the forecast
+ * @returns The React Query result object containing WeatherData array
+ */
 export function useWeather({ lat, lng, startDate, endDate, enabled = true }: UseWeatherOptions) {
   return useQuery({
     queryKey:  ['weather', lat, lng, startDate, endDate],

@@ -4,8 +4,16 @@
 
 import type { ItineraryDay, ActivityCard } from '@/types';
 
+/**
+ * Defines the level of severity for a constraint violation.
+ * @returns 'error' | 'warning' | 'info'
+ */
 export type ConstraintSeverity = 'error' | 'warning' | 'info';
 
+/**
+ * Represents a violation of an itinerary constraint rule.
+ * @returns The ConstraintViolation object
+ */
 export interface ConstraintViolation {
   id:          string;
   type:        string;
@@ -17,6 +25,9 @@ export interface ConstraintViolation {
 
 /**
  * Check if two activities have overlapping time windows.
+ * @param a - The first activity to check
+ * @param b - The second activity to check against
+ * @returns True if the time windows overlap, false otherwise
  */
 export function hasTimeOverlap(a: ActivityCard, b: ActivityCard): boolean {
   if (!a.startTime || !a.endTime || !b.startTime || !b.endTime) return false;
@@ -34,6 +45,8 @@ function timeToMinutes(time: string): number {
 
 /**
  * Validate opening hours: activity start time must be within open window.
+ * @param activity - The activity to check opening hours for
+ * @returns A ConstraintViolation if the venue might be closed, or null if open or unknown
  */
 export function validateOpeningHours(activity: ActivityCard): ConstraintViolation | null {
   if (!activity.startTime || !activity.openingHours) return null;
@@ -51,6 +64,10 @@ export function validateOpeningHours(activity: ActivityCard): ConstraintViolatio
 
 /**
  * Validate transit: enough time between activities.
+ * @param from - The preceding activity
+ * @param to - The subsequent activity
+ * @param minTransitMinutes - The minimum required travel time in minutes
+ * @returns A ConstraintViolation if the time gap is too short, or null if sufficient
  */
 export function validateTransitTime(
   from: ActivityCard,
@@ -73,6 +90,9 @@ export function validateTransitTime(
 
 /**
  * Validate accessibility: wheelchair user at non-accessible venue.
+ * @param activity - The activity to check for accessibility
+ * @param mobilityNeed - The user's mobility requirement string
+ * @returns A ConstraintViolation if wheelchair access is required but unavailable, or null
  */
 export function validateAccessibility(
   activity: ActivityCard,
@@ -92,6 +112,9 @@ export function validateAccessibility(
 
 /**
  * Validate budget: activity cost vs remaining budget.
+ * @param activity - The activity containing an estimated cost
+ * @param remainingBudget - The remaining daily budget limit
+ * @returns A ConstraintViolation if the cost exceeds the limit, or null
  */
 export function validateBudget(
   activity: ActivityCard,
@@ -114,6 +137,9 @@ export function validateBudget(
 
 /**
  * Run all validators for a full day.
+ * @param day - The itinerary day containing all activities
+ * @param options - Configuration options for validation thresholds
+ * @returns An array of ConstraintViolation objects detected in the day
  */
 export function validateDay(
   day: ItineraryDay,
