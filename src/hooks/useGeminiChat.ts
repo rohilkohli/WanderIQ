@@ -100,7 +100,7 @@ export function useGeminiChat(itineraryContext?: string) {
           )
         );
       } catch {
-        setError('Live Gemini service is unavailable right now. Showing offline assistant response.');
+        setError('Live Gemini service is unavailable (network, configuration/API key, or temporary outage). Showing offline assistant response.');
         // Fallback demo response when Cloud Functions aren't deployed
         const demoResponse = getDemoResponse(text);
         setMessages((prev) =>
