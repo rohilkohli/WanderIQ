@@ -47,7 +47,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({ moodQuery, setMoodQuer
         {/* Pill badge */}
         <div style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)", background: "var(--color-accent-light)", borderRadius: "var(--radius-full)", padding: "var(--space-2) var(--space-4)", marginBottom: "var(--space-6)", fontSize: "0.875rem", fontWeight: 600, color: "var(--color-accent)", animation: "fadeInUp 400ms ease-out both" }}>
           <span aria-hidden="true">✨</span>
-          Powered by Gemini 1.5 Flash · Google Maps · Firebase
+          AI-powered · Google Maps · Firebase
         </div>
 
         <h1 id="hero-heading" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.75rem, 6vw, 4.5rem)", fontWeight: 700, lineHeight: 1.1, marginBottom: "var(--space-6)", letterSpacing: "-0.02em", animation: "fadeInUp 500ms ease-out 100ms both" }}>
