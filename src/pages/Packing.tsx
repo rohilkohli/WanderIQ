@@ -93,9 +93,24 @@ const Packing: React.FC = () => {
   const handleAIGenerate = async () => {
     setLoading(true);
     analytics.packingListGenerated();
-    await new Promise((r) => setTimeout(r, 1500));
-    setLoading(false);
-    toast.success("Packing list updated by Gemini AI!");
+    try {
+      const res = await fetch("/api/packing-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destination: "Goa", days: 7, tripType: "Beach & Cultural" }),
+      });
+      if (!res.ok) throw new Error("Failed to generate packing list");
+      const data = await res.json();
+      if (data.categories) {
+        setCategories(data.categories);
+        toast.success("Packing list updated by Gemini AI!");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate AI packing list.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -34,18 +34,15 @@ const CATEGORY_ICONS: Record<string, string> = {
   miscellaneous: "💡",
 };
 
-const AI_SUGGESTIONS = [
-  { title: "Switch to a 3-star hotel on Day 3", savings: 1800, impact: "low" as const, desc: "Similar amenities, ₹1,800 cheaper per night" },
-  { title: "Take metro instead of cab on Day 4", savings: 600, impact: "low" as const, desc: "Saves 45 min and ₹600 in transit costs" },
-  { title: "Try the free heritage walk on Day 2", savings: 800, impact: "low" as const, desc: "Replaces ₹800 guided tour — same route!" },
-];
+// AI_SUGGESTIONS will be fetched from API
 
 const Budget: React.FC = () => {
   const { breakdown, total } = DEMO_BUDGET;
   const spent = Object.values(breakdown).reduce((s, v) => s + v, 0);
   const pct = Math.round((spent / total) * 100);
   const health = getBudgetHealth(pct);
-  const [showOptimize, setShowOptimize] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [appliedSuggestions, setApplied] = useState<string[]>([]);
 
   const pieData = Object.entries(breakdown).map(([k, v]) => ({
@@ -59,6 +56,28 @@ const Budget: React.FC = () => {
     Estimated: v,
     Budget: Math.round(total * (v / spent)),
   }));
+
+  const fetchSuggestions = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/budget-optimize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destination: "Goa", breakdown, total }),
+      });
+      if (!res.ok) throw new Error("Failed to optimize budget");
+      const data = await res.json();
+      if (data.suggestions) {
+        setSuggestions(data.suggestions);
+        toast.success("Budget optimized by Gemini AI!");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate AI budget suggestions.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const applySuggestion = (title: string, savings: number) => {
     if (appliedSuggestions.includes(title)) return;
@@ -176,14 +195,14 @@ const Budget: React.FC = () => {
           <h2 id="optimize-heading" style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem" }}>
             ✨ AI Budget Optimizer
           </h2>
-          <button onClick={() => setShowOptimize(true)} className="btn btn-primary btn-sm" disabled={showOptimize}>
-            {showOptimize ? "Suggestions loaded" : "Optimize my budget →"}
+          <button onClick={fetchSuggestions} className="btn btn-primary btn-sm" disabled={loading || suggestions.length > 0}>
+            {loading ? "Optimizing..." : suggestions.length > 0 ? "Suggestions loaded" : "Optimize my budget →"}
           </button>
         </div>
 
-        {showOptimize && (
+        {suggestions.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", animation: "fadeInUp 300ms ease-out" }}>
-            {AI_SUGGESTIONS.map((s) => (
+            {suggestions.map((s) => (
               <div key={s.title} className="card" style={{ padding: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-4)", opacity: appliedSuggestions.includes(s.title) ? 0.6 : 1 }}>
                 <div style={{ fontSize: "1.5rem" }} aria-hidden="true">
                   💡

@@ -216,6 +216,83 @@ Return ONLY the raw JSON array. No markdown fences.`;
   }
 });
 
+// ── POST /api/packing-generate — AI Packing List ───────────────
+app.post('/api/packing-generate', async (req, res) => {
+  const { destination, days, tripType, weather } = req.body;
+  if (!destination) { res.status(400).json({ error: 'destination required' }); return; }
+  if (!GEMINI_API_KEY) { res.status(503).json({ error: 'AI service not configured' }); return; }
+
+  const prompt = `${SYSTEM_PROMPT}
+
+Generate a comprehensive packing list for a ${days ?? 5}-day trip to ${destination}.
+Trip Type: ${tripType || 'General'}
+Weather/Climate: ${weather || 'Unknown'}
+
+Return ONLY a JSON array of category objects matching this exact structure:
+[
+  {
+    "name": "Clothing",
+    "icon": "👕",
+    "items": [
+      { "id": "uuid-1", "name": "Item name", "category": "Clothing", "checked": false, "isCustom": false }
+    ]
+  }
+]
+Use appropriate emojis for icons. Keep it concise but cover essentials. No markdown fences.`;
+
+  try {
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim()
+      .replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '');
+    const categories = JSON.parse(text);
+    res.json({ categories });
+  } catch (err) {
+    console.error('Packing generate error:', err);
+    res.status(500).json({ error: 'Packing generation temporarily unavailable' });
+  }
+});
+
+// ── POST /api/budget-optimize — AI Budget Suggestions ──────────
+app.post('/api/budget-optimize', async (req, res) => {
+  const { destination, breakdown, total } = req.body;
+  if (!breakdown || !total) { res.status(400).json({ error: 'breakdown and total required' }); return; }
+  if (!GEMINI_API_KEY) { res.status(503).json({ error: 'AI service not configured' }); return; }
+
+  const prompt = `${SYSTEM_PROMPT}
+
+Analyze this budget for a trip to ${destination || 'Unknown'}:
+Total Budget: INR ${total}
+Breakdown: ${JSON.stringify(breakdown)}
+
+Suggest 3 clever, specific ways to save money without ruining the experience.
+Return ONLY a JSON array matching this structure:
+[
+  {
+    "title": "Short actionable title",
+    "savings": 1500,
+    "impact": "low",
+    "desc": "1-sentence explanation of how to save this."
+  }
+]
+Impact must be "low", "medium", or "high".
+Return ONLY the raw JSON array. No markdown fences.`;
+
+  try {
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim()
+      .replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '');
+    const suggestions = JSON.parse(text);
+    res.json({ suggestions });
+  } catch (err) {
+    console.error('Budget optimize error:', err);
+    res.status(500).json({ error: 'Budget optimization temporarily unavailable' });
+  }
+});
+
 // ── Health check ─────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
   res.json({
