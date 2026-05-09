@@ -42,10 +42,10 @@ const providerHealth = {
   cohere: { configured: Boolean(COHERE_API_KEY), healthy: Boolean(COHERE_API_KEY), lastError: null, degradedAt: null },
 };
 
-/** TODO(anthropic): add Anthropic provider implementation here when key/model are configured. */
+/** TODO(anthropic): implement callAnthropic() with Claude chat + JSON mode support when key/model are configured. */
 const aiLogs = [];
 const aiFeedback = [];
-/** TODO(vector-memory): replace this with durable vector memory store for long-term personalization. In-memory only; resets on restart. */
+/** TODO(vector-memory): replace this with durable vector memory store (pgvector, Pinecone, Weaviate). In-memory only; resets on restart. */
 const userMemory = new Map();
 
 app.use(express.json({ limit: '4mb' }));
@@ -274,7 +274,9 @@ async function callGemini({ mode, systemInstruction, prompt, parts }) {
 
 async function callOpenAI({ mode, systemInstruction, prompt }) {
   if (!OPENAI_API_KEY) throw new Error('OpenAI key missing');
-  if (mode === 'stream') throw new Error('OpenAI streaming is not currently supported as a fallback provider. Streaming is only available with Gemini.');
+  if (mode === 'stream') {
+    throw new Error('OpenAI streaming is not currently supported as a fallback provider. Streaming is only available with Gemini; ensure Gemini is configured.');
+  }
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -305,7 +307,9 @@ async function callOpenAI({ mode, systemInstruction, prompt }) {
 
 async function callCohere({ mode, prompt }) {
   if (!COHERE_API_KEY) throw new Error('Cohere key missing');
-  if (mode === 'stream') throw new Error('Cohere streaming is not currently supported as a fallback provider. Streaming is only available with Gemini.');
+  if (mode === 'stream') {
+    throw new Error('Cohere streaming is not currently supported as a fallback provider. Streaming is only available with Gemini; ensure Gemini is configured.');
+  }
 
   const res = await fetch('https://api.cohere.ai/v2/chat', {
     method: 'POST',

@@ -98,7 +98,8 @@ export async function submitAiFeedback(params: {
         model: params.model,
       }),
     });
-  } catch {
+  } catch (err) {
     // Keep local memory even if network fails.
+    console.warn('AI feedback submission failed', err);
   }
 }
