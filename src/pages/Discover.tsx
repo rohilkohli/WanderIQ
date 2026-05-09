@@ -1,14 +1,19 @@
-import { PRICE_LABELS, CONDITION_BG } from "@/components/planner/demo-data";
 import React, { useState } from "react";
 import { useDiscoverLogic } from "@/hooks/useDiscoverLogic";
 import { submitAiFeedback } from "@/lib/aiMemory";
 import { getAiStatusLabel } from "@/lib/aiStatus";
 import { useAuthStore } from "@/store/useAuthStore";
 
-/* ── Demo destination data ─────────────────────────────── */
+const PRICE_LABELS: Record<number, string> = { 1: '₹', 2: '₹₹', 3: '₹₹₹', 4: '₹₹₹₹' };
+const CONDITION_BG: Record<string, string> = {
+  sunny: 'linear-gradient(135deg, #FFB300, #FF6F00)',
+  cloudy: 'linear-gradient(135deg, #78909C, #546E7A)',
+  rainy:  'linear-gradient(135deg, #1565C0, #0D47A1)',
+  clear:  'linear-gradient(135deg, #0288D1, #0097A7)',
+};
 
 const Discover: React.FC = () => {
-  const { moodQuery, setMoodQuery, destinations, loading, view, setView, compareIds, toggleCompare, compareDestinations, aiStatus, aiMeta, handleMoodSearch, handleSelectDestination } = useDiscoverLogic();
+  const { moodQuery, setMoodQuery, destinations, loading, view, setView, compareIds, toggleCompare, compareDestinations, aiStatus, aiMeta, searchError, handleMoodSearch, handleSelectDestination } = useDiscoverLogic();
   const user = useAuthStore((s) => s.user);
   const statusLabel = getAiStatusLabel(aiStatus);
   const [feedbackById, setFeedbackById] = useState<Record<string, "up" | "down">>({});
@@ -239,12 +244,22 @@ const Discover: React.FC = () => {
         </section>
       )}
 
+      {/* Error state */}
+      {searchError && destinations.length === 0 && !loading && (
+        <div style={{ textAlign: "center", padding: "var(--space-12) 0", animation: "fadeIn 300ms ease-out" }}>
+          <div style={{ fontSize: "3rem", marginBottom: "var(--space-4)" }}>⚠️</div>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", marginBottom: "var(--space-2)" }}>Search didn't return results</h2>
+          <p style={{ color: "var(--color-text-muted)", maxWidth: 400, margin: "0 auto", marginBottom: "var(--space-4)" }}>{searchError}</p>
+          <button className="btn btn-primary" onClick={handleMoodSearch}>🔄 Try again</button>
+        </div>
+      )}
+
       {/* Empty state */}
-      {destinations.length === 0 && !loading && (
+      {destinations.length === 0 && !loading && !searchError && (
         <div style={{ textAlign: "center", padding: "var(--space-16) 0", animation: "fadeIn 300ms ease-out" }}>
           <div style={{ fontSize: "4rem", marginBottom: "var(--space-4)" }}>🌍</div>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", marginBottom: "var(--space-2)" }}>Start with a mood</h2>
-          <p style={{ color: "var(--color-text-muted)", maxWidth: 400, margin: "0 auto" }}>Describe your dream trip above and Gemini AI will surface curated destinations matched to your preferences.</p>
+          <p style={{ color: "var(--color-text-muted)", maxWidth: 400, margin: "0 auto" }}>Describe your dream trip above and Gemini AI will surface personalized destinations matched to your preferences.</p>
         </div>
       )}
     </div>

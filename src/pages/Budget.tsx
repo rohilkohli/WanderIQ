@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 import { getBudgetHealth } from "@/lib/budget";
@@ -7,27 +7,23 @@ import toast from "react-hot-toast";
 import type { AiMeta, BudgetSuggestion } from "@/types";
 import { usePreferencesStore } from "@/store/usePreferencesStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useItineraryStore } from "@/store/useItineraryStore";
 import { buildAiUserContext, rememberAiAction, submitAiFeedback } from "@/lib/aiMemory";
+import { useNavigate } from "react-router-dom";
 
-const DEMO_BUDGET = {
-  total: 40000,
-  breakdown: {
-    flights: 8000,
-    accommodation: 12000,
-    food: 8000,
-    activities: 5000,
-    transport: 3500,
-    miscellaneous: 1200,
-  },
-};
-
-const CATEGORY_COLORS = {
+const CATEGORY_COLORS: Record<string, string> = {
   flights: "#1B4332",
   accommodation: "#52B788",
   food: "#E76F51",
   activities: "#4361EE",
   transport: "#E9C46A",
   miscellaneous: "#9A9690",
+  nature: "#2D6A4F",
+  experience: "#7209B7",
+  wellness: "#06D6A0",
+  shopping: "#F77F00",
+  attraction: "#3A86FF",
+  restaurant: "#E76F51",
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -37,6 +33,12 @@ const CATEGORY_ICONS: Record<string, string> = {
   activities: "🎭",
   transport: "🚗",
   miscellaneous: "💡",
+  nature: "🌿",
+  experience: "🎪",
+  wellness: "🧘",
+  shopping: "🛍️",
+  attraction: "🏛️",
+  restaurant: "🍽️",
 };
 
 // AI_SUGGESTIONS will be fetched from API
@@ -45,9 +47,27 @@ type ApiBudgetSuggestion = Omit<BudgetSuggestion, "description"> & { desc: strin
 const Budget: React.FC = () => {
   const preferences = usePreferencesStore((s) => s.preferences);
   const user = useAuthStore((s) => s.user);
-  const { breakdown, total } = DEMO_BUDGET;
+  const { activeItinerary } = useItineraryStore();
+  const navigate = useNavigate();
+
+  const currentDestination = activeItinerary?.destination?.name ?? "";
+  const daysCount = activeItinerary?.days?.length || 0;
+  
+  // Calculate real breakdown from activities
+  const realBreakdown = activeItinerary?.days?.reduce((acc, day) => {
+    [...day.morning, ...day.afternoon, ...day.evening].forEach(act => {
+      const cat = act.category ?? 'activities';
+      acc[cat] = (acc[cat] || 0) + (act.estimatedCost || 0);
+    });
+    return acc;
+  }, {} as Record<string, number>) ?? {};
+
+  // Filter out zero-value categories
+  const breakdown = Object.fromEntries(Object.entries(realBreakdown).filter(([, v]) => v > 0));
+  const hasData = Object.keys(breakdown).length > 0;
+  const total = activeItinerary?.totalBudget || 50000;
   const spent = Object.values(breakdown).reduce((s, v) => s + v, 0);
-  const pct = Math.round((spent / total) * 100);
+  const pct = total > 0 ? Math.round((spent / total) * 100) : 0;
   const health = getBudgetHealth(pct);
   const [suggestions, setSuggestions] = useState<ApiBudgetSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,7 +86,7 @@ const Budget: React.FC = () => {
   const barData = Object.entries(breakdown).map(([k, v]) => ({
     name: k.charAt(0).toUpperCase() + k.slice(1),
     Estimated: v,
-    Budget: Math.round(total * (v / spent)),
+    Budget: spent > 0 ? Math.round(total * (v / spent)) : 0,
   }));
 
   const fetchSuggestions = async () => {
@@ -76,7 +96,7 @@ const Budget: React.FC = () => {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ai-user-id": user?.uid ?? "guest" },
         body: JSON.stringify({
-          destination: "Goa",
+          destination: currentDestination,
           breakdown,
           total,
           preferences,
@@ -121,12 +141,38 @@ const Budget: React.FC = () => {
 
   const healthColors = { good: "var(--color-success)", warning: "var(--color-warning)", danger: "var(--color-error)" };
 
+  // If no itinerary or no activities, show helpful empty state
+  if (!activeItinerary || !hasData) {
+    return (
+      <div style={{ padding: "var(--space-8)", maxWidth: 1100, margin: "0 auto" }}>
+        <header style={{ marginBottom: "var(--space-8)", animation: "fadeInUp 300ms ease-out" }}>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", marginBottom: "var(--space-2)" }}>💰 Budget Dashboard</h1>
+          <p style={{ color: "var(--color-text-muted)" }}>Track and optimize your travel spending with AI insights</p>
+        </header>
+        <div style={{ textAlign: "center", padding: "var(--space-16) 0", animation: "fadeIn 300ms ease-out" }}>
+          <div style={{ fontSize: "4rem", marginBottom: "var(--space-4)" }}>📊</div>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", marginBottom: "var(--space-2)" }}>
+            {activeItinerary ? "No activities planned yet" : "No trip selected"}
+          </h2>
+          <p style={{ color: "var(--color-text-muted)", maxWidth: 420, margin: "0 auto", marginBottom: "var(--space-6)" }}>
+            {activeItinerary
+              ? "Add activities to your itinerary in the Planner to see real-time budget tracking and AI optimization."
+              : "Select a destination and generate an itinerary to see your budget dashboard with real spending data."}
+          </p>
+          <button className="btn btn-primary" onClick={() => navigate(activeItinerary ? "/planner" : "/discover")}>
+            {activeItinerary ? "📋 Go to Planner" : "🔍 Discover Destinations"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "var(--space-8)", maxWidth: 1100, margin: "0 auto" }}>
       {/* ── Header ── */}
       <header style={{ marginBottom: "var(--space-8)", animation: "fadeInUp 300ms ease-out" }}>
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", marginBottom: "var(--space-2)" }}>💰 Budget Dashboard</h1>
-        <p style={{ color: "var(--color-text-muted)" }}>Goa trip · Jun 15–22 · {7} days</p>
+        <p style={{ color: "var(--color-text-muted)" }}>{currentDestination} trip · {daysCount} days</p>
       </header>
 
       {/* ── Summary Cards ── */}
@@ -135,7 +181,7 @@ const Budget: React.FC = () => {
           { label: "Total Budget", value: formatCurrency(total), color: "var(--color-accent)", icon: "💎" },
           { label: "Estimated Spend", value: formatCurrency(spent), color: healthColors[health], icon: "💳" },
           { label: "Remaining", value: formatCurrency(total - spent), color: "var(--color-text-primary)", icon: "🏦" },
-          { label: "Daily Average", value: formatCurrency(Math.round(spent / 7)), color: "var(--color-text-muted)", icon: "📅" },
+          { label: "Daily Average", value: formatCurrency(Math.round(spent / Math.max(daysCount, 1))), color: "var(--color-text-muted)", icon: "📅" },
         ].map((card) => (
           <div key={card.label} className="card" style={{ padding: "var(--space-5)" }}>
             <span style={{ fontSize: "1.5rem", display: "block", marginBottom: "var(--space-2)" }} aria-hidden="true">
@@ -171,7 +217,7 @@ const Budget: React.FC = () => {
             <PieChart aria-label="Budget breakdown pie chart">
               <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value">
                 {pieData.map((entry) => (
-                  <Cell key={entry.key} fill={CATEGORY_COLORS[entry.key as keyof typeof CATEGORY_COLORS]} />
+                  <Cell key={entry.key} fill={CATEGORY_COLORS[entry.key] ?? "#9A9690"} />
                 ))}
               </Pie>
               <Tooltip formatter={(v: number) => formatCurrency(v)} />
@@ -202,12 +248,12 @@ const Budget: React.FC = () => {
         </h2>
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
           {Object.entries(breakdown).map(([key, value]) => {
-            const pctOfTotal = Math.round((value / total) * 100);
+            const pctOfTotal = total > 0 ? Math.round((value / total) * 100) : 0;
             return (
               <div key={key}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-2)", alignItems: "center" }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontWeight: 500 }}>
-                    <span aria-hidden="true">{CATEGORY_ICONS[key]}</span>
+                    <span aria-hidden="true">{CATEGORY_ICONS[key] ?? "📌"}</span>
                     {key.charAt(0).toUpperCase() + key.slice(1)}
                   </span>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
@@ -215,7 +261,7 @@ const Budget: React.FC = () => {
                   </span>
                 </div>
                 <div className="progress-bar">
-                  <div className="progress-bar-fill" style={{ width: `${pctOfTotal}%`, background: CATEGORY_COLORS[key as keyof typeof CATEGORY_COLORS] }} role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={total} aria-label={`${key}: ${formatCurrency(value)}`} />
+                  <div className="progress-bar-fill" style={{ width: `${pctOfTotal}%`, background: CATEGORY_COLORS[key] ?? "#9A9690" }} role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={total} aria-label={`${key}: ${formatCurrency(value)}`} />
                 </div>
               </div>
             );
@@ -232,8 +278,8 @@ const Budget: React.FC = () => {
           <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
             {statusLabel}
           </span>
-          <button onClick={fetchSuggestions} className="btn btn-primary btn-sm" disabled={loading || suggestions.length > 0}>
-            {loading ? "Optimizing..." : suggestions.length > 0 ? "Suggestions loaded" : "Optimize my budget →"}
+          <button onClick={fetchSuggestions} className="btn btn-primary btn-sm" disabled={loading}>
+            {loading ? "Optimizing..." : suggestions.length > 0 ? "🔄 Re-optimize" : "Optimize my budget →"}
           </button>
         </div>
 

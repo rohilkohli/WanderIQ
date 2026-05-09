@@ -17,7 +17,7 @@ RUN npm ci --omit=dev
 
 # Copy built app and server
 COPY --from=builder /app/dist ./dist
-COPY server.mjs ./
+COPY server.mjs ai-utils.mjs ./
 
 EXPOSE 8080
 CMD ["node", "server.mjs"]

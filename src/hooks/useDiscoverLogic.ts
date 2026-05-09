@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { analytics } from '@/lib/analytics';
-import { sanitizeInput } from '@/lib/utils';
-import type { AiMeta, DestinationResult } from '@/types';
+import { sanitizeInput, generateId } from '@/lib/utils';
+import type { AiMeta, DestinationResult, Itinerary } from '@/types';
 import { DEMO_DESTINATIONS } from '@/components/planner/demo-data';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useItineraryStore } from '@/store/useItineraryStore';
 import { buildAiUserContext, rememberAiAction } from '@/lib/aiMemory';
+import { isRateLimitError } from '@/lib/rateLimitCheck';
 
 /** Haversine distance in km between two lat/lng points. */
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -41,7 +43,8 @@ function rankByLocation(
 
 /**
  * Calls the same-origin /api/discover endpoint (Gemini-backed).
- * Falls back to geo-ranked demo data on any error.
+ * Falls back to demo destinations ONLY when API quota/rate limit is exhausted.
+ * All other errors show an error state with no static fallback.
  */
 async function fetchDestinations(
   query: string,
@@ -49,7 +52,8 @@ async function fetchDestinations(
   userId: string,
   userLat?: number,
   userLng?: number
-): Promise<{ destinations: DestinationResult[]; status: string; meta?: AiMeta }> {
+): Promise<{ destinations: DestinationResult[]; status: string; meta?: AiMeta; error?: string }> {
+  let httpStatus = 0;
   try {
     const res = await fetch('/api/discover', {
       method: 'POST',
@@ -59,18 +63,31 @@ async function fetchDestinations(
       },
       body: JSON.stringify({ query, userLat, userLng, preferences, userContext: buildAiUserContext(preferences) }),
     });
+    httpStatus = res.status;
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data = (await res.json()) as { destinations: DestinationResult[]; meta?: AiMeta };
-    if (!Array.isArray(data.destinations) || data.destinations.length === 0) throw new Error('Empty');
+    if (!Array.isArray(data.destinations) || data.destinations.length === 0) throw new Error('No destinations found for your query');
     return { destinations: data.destinations, status: data.meta?.status ?? 'validated', meta: data.meta };
-  } catch {
-    const base = userLat && userLng
-      ? rankByLocation(DEMO_DESTINATIONS, userLat, userLng)
-      : DEMO_DESTINATIONS;
+  } catch (err) {
+    // ONLY fall back to demo data when API quota/rate limit is exhausted
+    if (isRateLimitError(err, httpStatus)) {
+      const base = userLat && userLng
+        ? rankByLocation(DEMO_DESTINATIONS, userLat, userLng)
+        : DEMO_DESTINATIONS;
+      return {
+        destinations: base.length > 0 ? base : DEMO_DESTINATIONS,
+        status: 'rate_limited_fallback',
+        error: 'API usage limit reached. Showing curated destinations.',
+        meta: { provider: 'fallback', model: 'demo', validated: false, fallbackUsed: true, status: 'rate_limited_fallback' },
+      };
+    }
+    // All other errors — no static fallback
+    const message = err instanceof Error ? err.message : 'Search failed';
     return {
-      destinations: base.length > 0 ? base : DEMO_DESTINATIONS,
-      status: 'fallback_demo',
-      meta: { provider: 'demo', model: 'demo', validated: false, fallbackUsed: true, status: 'fallback_demo' },
+      destinations: [],
+      status: 'error',
+      error: message,
+      meta: { provider: 'none', model: 'none', validated: false, fallbackUsed: false, status: 'error' },
     };
   }
 }
@@ -89,6 +106,7 @@ export const useDiscoverLogic = () => {
   const [loading, setLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState<string>('idle');
   const [aiMeta, setAiMeta] = useState<AiMeta | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [view, setView] = useState<'grid' | 'compare'>('grid');
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -105,6 +123,7 @@ export const useDiscoverLogic = () => {
     const q = sanitizeInput(moodQuery);
     if (!q) return;
     setLoading(true);
+    setSearchError(null);
     analytics.discoverMoodSearch(q.length);
     try {
       const result = await fetchDestinations(
@@ -117,6 +136,9 @@ export const useDiscoverLogic = () => {
       setDestinations(result.destinations);
       setAiStatus(result.status);
       setAiMeta(result.meta ?? null);
+      if (result.error) {
+        setSearchError(result.error);
+      }
       rememberAiAction(`discover:${q.slice(0, 80)}`);
     } finally {
       setLoading(false);
@@ -129,8 +151,31 @@ export const useDiscoverLogic = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Derive budget from user preferences
+  const budgetMap: Record<string, number> = { economy: 30000, 'mid-range': 60000, luxury: 150000 };
+  const derivedBudget = budgetMap[preferences.budgetTier] ?? 50000;
+
   const handleSelectDestination = (dest: DestinationResult) => {
     analytics.destinationSelected(dest.name, dest.matchScore);
+    
+    const newItinerary: Itinerary = {
+      id: generateId(),
+      ownerUid: user?.uid ?? 'guest',
+      title: `Trip to ${dest.name}`,
+      destination: dest,
+      dateRange: { start: '', end: '' },
+      days: [],
+      budget: { flights: 0, accommodation: 0, food: 0, activities: 0, transport: 0, miscellaneous: 0 },
+      totalBudget: derivedBudget,
+      editorUids: [],
+      viewerUids: [],
+      isShared: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'draft',
+    };
+    
+    useItineraryStore.getState().setActiveItinerary(newItinerary);
     navigate(`/planner?destination=${dest.id}`);
   };
 
@@ -152,6 +197,7 @@ export const useDiscoverLogic = () => {
     compareDestinations,
     aiStatus,
     aiMeta,
+    searchError,
     handleMoodSearch,
     handleSelectDestination,
   };
