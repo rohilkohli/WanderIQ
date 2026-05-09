@@ -9,6 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
+import { SYSTEM_PROMPT, buildPrompt, getConfiguredFallbackOrder, parseModelJson, sanitizeText } from './ai-utils.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -28,11 +29,6 @@ const MAX_CONTEXT_LENGTH = 12000;
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const AI_LOG_LIMIT = 300;
 const FEEDBACK_LIMIT = 200;
-
-function sanitizeText(value, maxLength = MAX_MESSAGE_LENGTH) {
-  if (typeof value !== 'string') return '';
-  return value.replace(/[\u0000-\u001F\u007F]/g, ' ').trim().slice(0, maxLength);
-}
 
 const FALLBACK_ORDER = (process.env.AI_PROVIDER_FALLBACK || 'gemini,openai,cohere')
   .split(',')
@@ -60,33 +56,6 @@ app.use((_req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   next();
 });
-
-const SYSTEM_PROMPT = `You are VoyaIQ, an expert AI travel planning assistant.
-You help users discover destinations, build multi-day itineraries, and plan smart trips.
-Always consider budget, dietary needs, mobility constraints, and travel style.
-Keep responses concise, structured, and actionable. Use markdown formatting.
-When suggesting activities, include estimated costs in INR and duration in minutes.`;
-
-const FewShotExamples = {
-  discover: [
-    {
-      input: 'Mood: 4-day cultural trip under INR 30000, vegetarian food, low walking',
-      output: 'Return culturally rich destinations with low exertion options and budget-aware recommendations.',
-    },
-  ],
-  autofill: [
-    {
-      input: 'Slot: morning, existing: Museum of Goa',
-      output: 'Suggest a non-duplicate, nearby, budget-aware morning activity with wheelchair notes.',
-    },
-  ],
-  budget: [
-    {
-      input: 'Accommodation over-indexed by 40%',
-      output: 'Suggest practical swaps with estimated INR savings and impact scores.',
-    },
-  ],
-};
 
 const AiStatus = {
   VALIDATED: 'validated',
@@ -192,26 +161,6 @@ function sanitizeImageBase64(value) {
   return estimatedBytes <= MAX_IMAGE_BYTES ? compact : null;
 }
 
-function parseModelJson(text) {
-  const cleaned = sanitizeText(text, 200000)
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/\s*```$/, '')
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const objStart = cleaned.indexOf('{');
-    const arrStart = cleaned.indexOf('[');
-    const startCandidates = [objStart, arrStart].filter((x) => x >= 0);
-    if (startCandidates.length === 0) throw new Error('No JSON payload found');
-    const start = Math.min(...startCandidates);
-    const end = Math.max(cleaned.lastIndexOf('}'), cleaned.lastIndexOf(']'));
-    if (end < start) throw new Error('Malformed JSON payload');
-    return JSON.parse(cleaned.slice(start, end + 1));
-  }
-}
-
 function logAiEvent(entry) {
   const normalized = {
     timestamp: new Date().toISOString(),
@@ -232,15 +181,6 @@ function setProviderDegraded(provider, err) {
   providerHealth[provider].healthy = false;
   providerHealth[provider].lastError = sanitizeText(err instanceof Error ? err.message : String(err), 240);
   providerHealth[provider].degradedAt = new Date().toISOString();
-}
-
-function getConfiguredFallbackOrder() {
-  const unique = [];
-  for (const provider of FALLBACK_ORDER) {
-    if (!unique.includes(provider)) unique.push(provider);
-  }
-  if (unique.length === 0) unique.push('gemini');
-  return unique;
 }
 
 function getUserId(req) {
@@ -264,6 +204,7 @@ function normalizeUserContext(raw) {
             if (!item || typeof item !== 'object') return null;
             return {
               feature: sanitizeText(String(item.feature || ''), 40),
+              responseId: sanitizeText(String(item.responseId || ''), 120),
               rating: sanitizeText(String(item.rating || ''), 20),
               correction: sanitizeText(String(item.correction || ''), 180),
             };
@@ -303,33 +244,12 @@ function rememberUserFeedback(userId, feedback) {
     ...existing.recentRatings,
     {
       feature: sanitizeText(feedback.feature, 40),
+      responseId: sanitizeText(feedback.responseId || '', 120),
       rating: sanitizeText(feedback.rating, 20),
       correction: sanitizeText(feedback.correction || '', 180),
     },
   ].slice(-8);
   userMemory.set(userId, existing);
-}
-
-function buildPrompt({ task, instruction, payload, userContext, outputContract }) {
-  const examples = FewShotExamples[task] || [];
-  const fewShotBlock = examples.length
-    ? `Few-shot guidance:\n${examples
-        .map((item, index) => `Example ${index + 1} input: ${item.input}\nExample ${index + 1} target behavior: ${item.output}`)
-        .join('\n\n')}`
-    : '';
-
-  return [
-    SYSTEM_PROMPT,
-    `Task: ${instruction}`,
-    `User preferences: ${JSON.stringify(userContext.preferences ?? {})}`,
-    `Recent user actions: ${JSON.stringify(userContext.recentActions ?? [])}`,
-    `Recent rated AI suggestions: ${JSON.stringify(userContext.recentRatings ?? [])}`,
-    `Request payload: ${JSON.stringify(payload)}`,
-    fewShotBlock,
-    outputContract,
-  ]
-    .filter(Boolean)
-    .join('\n\n');
 }
 
 async function callGemini({ mode, systemInstruction, prompt, parts }) {
@@ -416,7 +336,7 @@ async function callProvider(provider, { mode, systemInstruction, prompt, parts }
 }
 
 async function runWithFallback({ endpoint, mode, prompt, systemInstruction, schema, parts }) {
-  const providers = getConfiguredFallbackOrder();
+  const providers = getConfiguredFallbackOrder(FALLBACK_ORDER);
   const attemptErrors = [];
 
   for (let index = 0; index < providers.length; index += 1) {
@@ -825,7 +745,7 @@ app.get('/api/admin/ai-logs', (req, res) => {
     summary: {
       totalLogs: aiLogs.length,
       totalFeedback: aiFeedback.length,
-      fallbackOrder: getConfiguredFallbackOrder(),
+      fallbackOrder: getConfiguredFallbackOrder(FALLBACK_ORDER),
     },
     providerHealth,
     logs,
@@ -838,7 +758,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     providers: providerHealth,
-    fallbackOrder: getConfiguredFallbackOrder(),
+    fallbackOrder: getConfiguredFallbackOrder(FALLBACK_ORDER),
     logCount: aiLogs.length,
     feedbackCount: aiFeedback.length,
     timestamp: new Date().toISOString(),

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { analytics } from '@/lib/analytics';
 import { sanitizeInput } from '@/lib/utils';
-import type { DestinationResult } from '@/types';
+import type { AiMeta, DestinationResult } from '@/types';
 import { DEMO_DESTINATIONS } from '@/components/planner/demo-data';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -49,7 +49,7 @@ async function fetchDestinations(
   userId: string,
   userLat?: number,
   userLng?: number
-): Promise<{ destinations: DestinationResult[]; status: string }> {
+): Promise<{ destinations: DestinationResult[]; status: string; meta?: AiMeta }> {
   try {
     const res = await fetch('/api/discover', {
       method: 'POST',
@@ -60,14 +60,18 @@ async function fetchDestinations(
       body: JSON.stringify({ query, userLat, userLng, preferences, userContext: buildAiUserContext(preferences) }),
     });
     if (!res.ok) throw new Error(`API ${res.status}`);
-    const data = (await res.json()) as { destinations: DestinationResult[]; meta?: { status?: string } };
+    const data = (await res.json()) as { destinations: DestinationResult[]; meta?: AiMeta };
     if (!Array.isArray(data.destinations) || data.destinations.length === 0) throw new Error('Empty');
-    return { destinations: data.destinations, status: data.meta?.status ?? 'validated' };
+    return { destinations: data.destinations, status: data.meta?.status ?? 'validated', meta: data.meta };
   } catch {
     const base = userLat && userLng
       ? rankByLocation(DEMO_DESTINATIONS, userLat, userLng)
       : DEMO_DESTINATIONS;
-    return { destinations: base.length > 0 ? base : DEMO_DESTINATIONS, status: 'fallback_demo' };
+    return {
+      destinations: base.length > 0 ? base : DEMO_DESTINATIONS,
+      status: 'fallback_demo',
+      meta: { provider: 'demo', model: 'demo', validated: false, fallbackUsed: true, status: 'fallback_demo' },
+    };
   }
 }
 
@@ -84,6 +88,7 @@ export const useDiscoverLogic = () => {
   const [destinations, setDestinations] = useState<DestinationResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState<string>('idle');
+  const [aiMeta, setAiMeta] = useState<AiMeta | null>(null);
   const [view, setView] = useState<'grid' | 'compare'>('grid');
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -111,6 +116,7 @@ export const useDiscoverLogic = () => {
       );
       setDestinations(result.destinations);
       setAiStatus(result.status);
+      setAiMeta(result.meta ?? null);
       rememberAiAction(`discover:${q.slice(0, 80)}`);
     } finally {
       setLoading(false);
@@ -145,6 +151,7 @@ export const useDiscoverLogic = () => {
     compareIds, toggleCompare,
     compareDestinations,
     aiStatus,
+    aiMeta,
     handleMoodSearch,
     handleSelectDestination,
   };

@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import { generateId } from "@/lib/utils";
 import { analytics } from "@/lib/analytics";
 import toast from "react-hot-toast";
-import type { PackingCategory, PackingItem } from "@/types";
+import type { AiMeta, PackingCategory, PackingItem } from "@/types";
+import { buildAiUserContext, rememberAiAction, submitAiFeedback } from "@/lib/aiMemory";
+import { usePreferencesStore } from "@/store/usePreferencesStore";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const INITIAL_LIST: PackingCategory[] = [
   {
@@ -63,10 +66,15 @@ const INITIAL_LIST: PackingCategory[] = [
 ];
 
 const Packing: React.FC = () => {
+  const preferences = usePreferencesStore((s) => s.preferences);
+  const user = useAuthStore((s) => s.user);
   const [categories, setCategories] = useState<PackingCategory[]>(INITIAL_LIST);
   const [newItemText, setNewItemText] = useState("");
   const [newItemCat, setNewItemCat] = useState(INITIAL_LIST[0].name);
   const [loading, setLoading] = useState(false);
+  const [aiStatus, setAiStatus] = useState<string>("idle");
+  const [aiMeta, setAiMeta] = useState<AiMeta | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState<"up" | "down" | null>(null);
 
   const totalItems = categories.flatMap((c) => c.items).length;
   const checkedItems = categories.flatMap((c) => c.items).filter((i) => i.checked).length;
@@ -96,13 +104,23 @@ const Packing: React.FC = () => {
     try {
       const res = await fetch("/api/packing-generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ destination: "Goa", days: 7, tripType: "Beach & Cultural" }),
+        headers: { "Content-Type": "application/json", "x-ai-user-id": user?.uid ?? "guest" },
+        body: JSON.stringify({
+          destination: "Goa",
+          days: 7,
+          tripType: "Beach & Cultural",
+          preferences,
+          userContext: buildAiUserContext(preferences),
+        }),
       });
       if (!res.ok) throw new Error("Failed to generate packing list");
-      const data = await res.json();
+      const data = await res.json() as { categories?: PackingCategory[]; meta?: AiMeta };
       if (data.categories) {
         setCategories(data.categories);
+        setAiStatus(data.meta?.status ?? "validated");
+        setAiMeta(data.meta ?? null);
+        setFeedbackRating(null);
+        rememberAiAction("packing:goa:7d");
         toast.success("Packing list updated by Gemini AI!");
       }
     } catch (err) {
@@ -111,6 +129,19 @@ const Packing: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFeedback = async (rating: "up" | "down") => {
+    if (feedbackRating) return;
+    setFeedbackRating(rating);
+    await submitAiFeedback({
+      feature: "packing",
+      responseId: "packing-goa-7d",
+      rating,
+      provider: aiMeta?.provider,
+      model: aiMeta?.model,
+      userId: user?.uid ?? "guest",
+    });
   };
 
   return (
@@ -133,15 +164,44 @@ const Packing: React.FC = () => {
       </header>
 
       {/* ── AI Regen ── */}
-      <div style={{ display: "flex", gap: "var(--space-3)", marginBottom: "var(--space-6)", animation: "fadeInUp 300ms ease-out 60ms both" }}>
-        <button onClick={handleAIGenerate} disabled={loading} className="btn btn-primary" aria-busy={loading}>
-          {loading ? <span style={{ display: "inline-block", width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white", borderRadius: "50%", animation: "spin 1s linear infinite" }} /> : "✨"}
-          Regenerate with Gemini AI
-        </button>
-        <button onClick={() => setCategories((prev) => prev.map((c) => ({ ...c, items: c.items.map((i) => ({ ...i, checked: false })) })))} className="btn btn-ghost">
-          Reset all
-        </button>
+      <div style={{ display: "flex", gap: "var(--space-3)", marginBottom: "var(--space-6)", animation: "fadeInUp 300ms ease-out 60ms both", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+          {aiStatus === "validated_fallback" ? "Validated / AI Fallback" : aiStatus === "idle" ? "" : "Validated"}
+        </span>
+        <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+          <button onClick={handleAIGenerate} disabled={loading} className="btn btn-primary" aria-busy={loading}>
+            {loading ? <span style={{ display: "inline-block", width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white", borderRadius: "50%", animation: "spin 1s linear infinite" }} /> : "✨"}
+            Regenerate with Gemini AI
+          </button>
+          <button onClick={() => setCategories((prev) => prev.map((c) => ({ ...c, items: c.items.map((i) => ({ ...i, checked: false })) })))} className="btn btn-ghost">
+            Reset all
+          </button>
+        </div>
       </div>
+
+      {aiStatus !== "idle" && (
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Was this list helpful?</span>
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ minHeight: 24, padding: "2px 8px" }}
+            disabled={Boolean(feedbackRating)}
+            onClick={() => handleFeedback("up")}
+            aria-label="Rate packing list as helpful"
+          >
+            👍
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ minHeight: 24, padding: "2px 8px" }}
+            disabled={Boolean(feedbackRating)}
+            onClick={() => handleFeedback("down")}
+            aria-label="Rate packing list as not helpful"
+          >
+            👎
+          </button>
+        </div>
+      )}
 
       {/* ── Categories ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)", animation: "fadeInUp 300ms ease-out 120ms both" }}>

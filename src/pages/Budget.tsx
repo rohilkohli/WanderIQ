@@ -3,7 +3,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import { formatCurrency } from "@/lib/utils";
 import { getBudgetHealth } from "@/lib/budget";
 import toast from "react-hot-toast";
-import type { BudgetSuggestion } from "@/types";
+import type { AiMeta, BudgetSuggestion } from "@/types";
 import { usePreferencesStore } from "@/store/usePreferencesStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { buildAiUserContext, rememberAiAction, submitAiFeedback } from "@/lib/aiMemory";
@@ -53,6 +53,7 @@ const Budget: React.FC = () => {
   const [appliedSuggestions, setApplied] = useState<string[]>([]);
   const [ratedSuggestions, setRatedSuggestions] = useState<Record<string, "up" | "down">>({});
   const [aiStatus, setAiStatus] = useState<string>("idle");
+  const [aiMeta, setAiMeta] = useState<AiMeta | null>(null);
 
   const pieData = Object.entries(breakdown).map(([k, v]) => ({
     name: k.charAt(0).toUpperCase() + k.slice(1),
@@ -81,10 +82,11 @@ const Budget: React.FC = () => {
         }),
       });
       if (!res.ok) throw new Error("Failed to optimize budget");
-      const data = await res.json() as { suggestions?: ApiBudgetSuggestion[]; meta?: { status?: string } };
+      const data = await res.json() as { suggestions?: ApiBudgetSuggestion[]; meta?: AiMeta };
       if (Array.isArray(data.suggestions)) {
         setSuggestions(data.suggestions);
         setAiStatus(data.meta?.status ?? "validated");
+        setAiMeta(data.meta ?? null);
         rememberAiAction("budget:optimize");
         toast.success("Budget optimized by Gemini AI!");
       }
@@ -109,6 +111,8 @@ const Budget: React.FC = () => {
       feature: "budget",
       responseId: suggestion.title,
       rating,
+      provider: aiMeta?.provider,
+      model: aiMeta?.model,
       userId: user?.uid ?? "guest",
     });
   };

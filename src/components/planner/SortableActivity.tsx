@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { formatCurrency } from "@/lib/utils";
+import { submitAiFeedback } from "@/lib/aiMemory";
+import { useAuthStore } from "@/store/useAuthStore";
 import type { ActivityCard, TimeSlot } from "@/types";
 import { CATEGORY_ICONS, CATEGORY_COLORS } from "./constants";
 
@@ -25,12 +27,27 @@ export interface SortableActivityProps {
  * @param props - {@link SortableActivityProps}
  */
 export const SortableActivity: React.FC<SortableActivityProps> = ({ activity, dayId, slot, onDelete }) => {
+  const user = useAuthStore((s) => s.user);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: activity.id });
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 100 : "auto",
+  };
+
+  const handleFeedback = async (rating: "up" | "down") => {
+    if (feedback || activity.source !== "ai") return;
+    setFeedback(rating);
+    await submitAiFeedback({
+      feature: "autofill",
+      responseId: activity.id,
+      rating,
+      provider: activity.aiMeta?.provider,
+      model: activity.aiMeta?.model,
+      userId: user?.uid ?? "guest",
+    });
   };
 
   return (
@@ -69,6 +86,28 @@ export const SortableActivity: React.FC<SortableActivityProps> = ({ activity, da
         </div>
 
         {/* Delete */}
+        {activity.source === "ai" && (
+          <div style={{ display: "flex", gap: "var(--space-1)" }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ minHeight: 24, padding: "2px 8px" }}
+              disabled={Boolean(feedback)}
+              onClick={() => handleFeedback("up")}
+              aria-label={`Rate ${activity.name} as helpful`}
+            >
+              👍
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ minHeight: 24, padding: "2px 8px" }}
+              disabled={Boolean(feedback)}
+              onClick={() => handleFeedback("down")}
+              aria-label={`Rate ${activity.name} as not helpful`}
+            >
+              👎
+            </button>
+          </div>
+        )}
         <button onClick={() => onDelete(dayId, slot, activity.id)} aria-label={`Remove ${activity.name}`} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--color-text-muted)", padding: "var(--space-1)", borderRadius: "var(--radius-sm)", fontSize: "1rem", flexShrink: 0, transition: "color var(--transition-fast)" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-error)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}>
           ×
         </button>

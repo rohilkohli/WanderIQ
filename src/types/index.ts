@@ -155,6 +155,7 @@ export interface ActivityCard {
   isWheelchairAccessible?: boolean;
   tags?:            string[];
   notes?:           string;
+  aiMeta?:          AiMeta;
   source:           'manual' | 'ai' | 'places';
 }
 
@@ -336,6 +337,14 @@ export interface Comment {
  * Chat message within the Gemini AI assistant interface.
  * @returns The ChatMessage object
  */
+export interface AiMeta {
+  provider?: string;
+  model?: string;
+  validated?: boolean;
+  fallbackUsed?: boolean;
+  status?: string;
+}
+
 export interface ChatMessage {
   id:        string;
   role:      'user' | 'model';
@@ -343,13 +352,7 @@ export interface ChatMessage {
   timestamp: string;
   imageUrl?: string;
   isStreaming?: boolean;
-  aiMeta?: {
-    provider?: string;
-    model?: string;
-    validated?: boolean;
-    fallbackUsed?: boolean;
-    status?: string;
-  };
+  aiMeta?: AiMeta;
 }
 
 /**

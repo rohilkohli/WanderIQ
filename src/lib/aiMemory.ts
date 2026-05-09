@@ -58,6 +58,7 @@ export function buildAiUserContext(preferences?: Partial<UserPreferences>) {
     recentActions: memory.recentActions,
     recentRatings: memory.recentRatings.map((item) => ({
       feature: item.feature,
+      responseId: item.responseId,
       rating: item.rating,
       correction: item.correction,
     })),

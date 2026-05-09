@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { validateDay } from "@/lib/constraints";
 import { formatCurrency, generateId } from "@/lib/utils";
 import { analytics } from "@/lib/analytics";
-import type { ActivityCard, ItineraryDay, TimeSlot } from "@/types";
+import type { ActivityCard, AiMeta, ItineraryDay, TimeSlot } from "@/types";
 import toast from "react-hot-toast";
 import { buildAiUserContext, rememberAiAction } from "@/lib/aiMemory";
 
@@ -101,8 +101,8 @@ const Planner: React.FC = () => {
 
       let activity: ActivityCard;
       if (res.ok) {
-        const data = await res.json() as { activity: Omit<ActivityCard, 'id' | 'source'>; meta?: { status?: string; fallbackUsed?: boolean } };
-        activity = { ...data.activity, id: generateId(), source: 'ai' };
+        const data = await res.json() as { activity: Omit<ActivityCard, 'id' | 'source' | 'aiMeta'>; meta?: AiMeta };
+        activity = { ...data.activity, id: generateId(), source: 'ai', aiMeta: data.meta };
         setAiStatus(data.meta?.status ?? 'validated');
         rememberAiAction(`autofill:${destination}:${slot}`);
       } else {
