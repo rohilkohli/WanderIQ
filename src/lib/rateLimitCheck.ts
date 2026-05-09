@@ -11,12 +11,23 @@
 export function isRateLimitError(err: unknown, httpStatus?: number): boolean {
   if (httpStatus === 429) return true;
 
-  const msg =
-    err instanceof Error
-      ? err.message.toLowerCase()
-      : typeof err === 'string'
-        ? err.toLowerCase()
-        : '';
+  const getMsg = (e: any): string => {
+    if (typeof e === 'string') return e.toLowerCase();
+    if (e instanceof Error) return e.message.toLowerCase();
+    if (e && typeof e === 'object') {
+      // Check for common error properties in JSON responses
+      const parts = [
+        e.error,
+        e.message,
+        e.details ? JSON.stringify(e.details) : '',
+        e.status
+      ].filter(Boolean);
+      return parts.join(' ').toLowerCase();
+    }
+    return '';
+  };
+
+  const msg = getMsg(err);
 
   return (
     msg.includes('429') ||

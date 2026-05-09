@@ -64,13 +64,20 @@ async function fetchDestinations(
       body: JSON.stringify({ query, userLat, userLng, preferences, userContext: buildAiUserContext(preferences) }),
     });
     httpStatus = res.status;
-    if (!res.ok) throw new Error(`API ${res.status}`);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const errorMsg = errorData.error || `API ${res.status}`;
+      const err = new Error(errorMsg);
+      (err as any)._details = errorData;
+      throw err;
+    }
     const data = (await res.json()) as { destinations: DestinationResult[]; meta?: AiMeta };
     if (!Array.isArray(data.destinations) || data.destinations.length === 0) throw new Error('No destinations found for your query');
     return { destinations: data.destinations, status: data.meta?.status ?? 'validated', meta: data.meta };
   } catch (err) {
+    const errorDetails = (err as any)?._details;
     // ONLY fall back to demo data when API quota/rate limit is exhausted
-    if (isRateLimitError(err, httpStatus)) {
+    if (isRateLimitError(err, httpStatus) || isRateLimitError(errorDetails)) {
       const base = userLat && userLng
         ? rankByLocation(DEMO_DESTINATIONS, userLat, userLng)
         : DEMO_DESTINATIONS;

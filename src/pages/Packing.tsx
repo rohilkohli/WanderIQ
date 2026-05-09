@@ -90,6 +90,7 @@ const Packing: React.FC = () => {
   const handleAIGenerate = async () => {
     setLoading(true);
     analytics.packingListGenerated();
+    let httpStatus = 0;
     try {
       const res = await fetch("/api/packing-generate", {
         method: "POST",
@@ -103,9 +104,13 @@ const Packing: React.FC = () => {
           userContext: buildAiUserContext(preferences),
         }),
       });
+      httpStatus = res.status;
       if (!res.ok) {
-        const packErr = new Error(`Failed to generate packing list: ${res.status}`);
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.error || `Failed to generate packing list: ${res.status}`;
+        const packErr = new Error(errorMsg);
         (packErr as any)._httpStatus = res.status;
+        (packErr as any)._details = errorData;
         throw packErr;
       }
       const data = await res.json() as { categories?: PackingCategory[]; meta?: AiMeta };
@@ -121,8 +126,9 @@ const Packing: React.FC = () => {
     } catch (err) {
       console.error(err);
       const httpStatus = (err as any)?._httpStatus;
+      const errorDetails = (err as any)?._details;
       // ONLY use static fallback when API quota is exhausted
-      if (isRateLimitError(err, httpStatus)) {
+      if (isRateLimitError(err, httpStatus) || isRateLimitError(errorDetails)) {
         setCategories(RATE_LIMIT_FALLBACK_LIST);
         setHasGenerated(true);
         toast.error("API limit reached — showing a generic packing list.");

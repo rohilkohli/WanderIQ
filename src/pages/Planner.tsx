@@ -95,6 +95,7 @@ const Planner: React.FC = () => {
       : [];
     const destination = activeItinerary.destination.name;
     const dayNumber = day?.dayNumber ?? 1;
+    let httpStatus = 0;
 
     try {
       const res = await fetch(AUTOFILL_ENDPOINT, {
@@ -110,9 +111,13 @@ const Planner: React.FC = () => {
         }),
       });
 
+      httpStatus = res.status;
       if (!res.ok) {
-        const httpErr = new Error(`API error: ${res.status}`);
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.error || `API error: ${res.status}`;
+        const httpErr = new Error(errorMsg);
         (httpErr as any)._httpStatus = res.status;
+        (httpErr as any)._details = errorData;
         throw httpErr;
       }
 
@@ -127,8 +132,9 @@ const Planner: React.FC = () => {
     } catch (err) {
       console.error('Autofill failed:', err);
       const httpStatus = (err as any)?._httpStatus;
+      const errorDetails = (err as any)?._details;
       // ONLY use static fallback when API quota is exhausted
-      if (isRateLimitError(err, httpStatus)) {
+      if (isRateLimitError(err, httpStatus) || isRateLimitError(errorDetails)) {
         const fallback: ActivityCard = {
           id: generateId(),
           name: slot === "morning" ? "Morning Exploration" : slot === "afternoon" ? "Local Sightseeing" : "Dinner & Sunset",
@@ -156,6 +162,7 @@ const Planner: React.FC = () => {
     setIsGenerating(true);
     const destName = activeItinerary.destination.name;
     const tid = toast.loading(`Generating full itinerary for ${destName}...`);
+    let httpStatus = 0;
     
     try {
       const res = await fetch('/api/itinerary-generate', {
@@ -171,8 +178,11 @@ const Planner: React.FC = () => {
       });
       
       if (!res.ok) {
-        const genErr = new Error(`Generation failed: ${res.status}`);
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.error || `Generation failed: ${res.status}`;
+        const genErr = new Error(errorMsg);
         (genErr as any)._httpStatus = res.status;
+        (genErr as any)._details = errorData;
         throw genErr;
       }
       
@@ -198,8 +208,9 @@ const Planner: React.FC = () => {
     } catch (err) {
       console.error('Itinerary generation failed:', err);
       const httpStatus = (err as any)?._httpStatus;
+      const errorDetails = (err as any)?._details;
       // ONLY fall back to demo data when API quota is exhausted
-      if (isRateLimitError(err, httpStatus)) {
+      if (isRateLimitError(err, httpStatus) || isRateLimitError(errorDetails)) {
         useItineraryStore.getState().setActiveItinerary({
           ...activeItinerary,
           days: DEMO_DAYS.map(d => ({ ...d, id: generateId() })),
