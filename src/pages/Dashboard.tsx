@@ -8,19 +8,9 @@ import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import { db } from "@/firebase";
 import type { Itinerary } from "@/types";
 
-const WISHLIST = [
-  { name: "Iceland", emoji: "🌋", tag: "Adventure" },
-  { name: "Kyoto", emoji: "⛩️", tag: "Cultural" },
-  { name: "Maldives", emoji: "🏝️", tag: "Beach" },
-  { name: "Peru", emoji: "🦙", tag: "Adventure" },
-];
+const WISHLIST: { name: string; emoji: string; tag: string }[] = [];
 
-const BADGES = [
-  { id: "first-trip", icon: "✈️", label: "First Trip Planned", desc: "Welcome to VoyaIQ!", earned: true },
-  { id: "three-trips", icon: "🗺️", label: "3 Trips Planned", desc: "You're a regular planner!", earned: true },
-  { id: "budget-master", icon: "💰", label: "Budget Master", desc: "Stayed under budget 3x", earned: false },
-  { id: "solo-traveler", icon: "🧍", label: "Solo Explorer", desc: "Planned your first solo trip", earned: false },
-];
+const BADGES: { id: string; icon: string; label: string; desc: string; earned: boolean }[] = [];
 
 const DEST_EMOJI: Record<string, string> = {
   goa: "🏖️", rajasthan: "🏰", coorg: "🌿", andaman: "🏝️", varanasi: "🕌",
@@ -207,19 +197,23 @@ const Dashboard: React.FC = () => {
             <h2 id="wishlist-heading" style={{ fontFamily: "var(--font-display)", fontSize: "1.125rem", marginBottom: "var(--space-4)" }}>
               🌟 Wishlist
             </h2>
-            <ul  style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", listStyle: "none" }}>
-              {WISHLIST.map((w) => (
-                <li key={w.name}  style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                    <span aria-hidden="true">{w.emoji}</span>
-                    <span style={{ fontWeight: 500 }}>{w.name}</span>
-                  </div>
-                  <span className="badge badge-muted" style={{ fontSize: "0.7rem" }}>
-                    {w.tag}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {WISHLIST.length === 0 ? (
+              <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", textAlign: "center", padding: "var(--space-4) 0" }}>Your wishlist is empty.</p>
+            ) : (
+              <ul style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", listStyle: "none" }}>
+                {WISHLIST.map((w) => (
+                  <li key={w.name}  style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                      <span aria-hidden="true">{w.emoji}</span>
+                      <span style={{ fontWeight: 500 }}>{w.name}</span>
+                    </div>
+                    <span className="badge badge-muted" style={{ fontSize: "0.7rem" }}>
+                      {w.tag}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: "var(--space-3)", justifyContent: "center" }} onClick={() => navigate("/discover")}>
               Explore more →
             </button>
@@ -230,14 +224,18 @@ const Dashboard: React.FC = () => {
             <h2 id="badges-heading" style={{ fontFamily: "var(--font-display)", fontSize: "1.125rem", marginBottom: "var(--space-4)" }}>
               🏆 Achievements
             </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-              {BADGES.map((b) => (
-                <div key={b.id} style={{ padding: "var(--space-3)", borderRadius: "var(--radius-md)", border: `1px solid ${b.earned ? "var(--color-accent)" : "var(--color-border)"}`, background: b.earned ? "var(--color-accent-light)" : "var(--color-surface-alt)", opacity: b.earned ? 1 : 0.6, textAlign: "center" }} role="img" aria-label={`${b.label}: ${b.earned ? "earned" : "not yet earned"}. ${b.desc}`}>
-                  <div style={{ fontSize: "1.5rem", marginBottom: "var(--space-1)" }}>{b.icon}</div>
-                  <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: b.earned ? "var(--color-accent)" : "var(--color-text-muted)", lineHeight: 1.3 }}>{b.label}</div>
-                </div>
-              ))}
-            </div>
+            {BADGES.length === 0 ? (
+              <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem", textAlign: "center", padding: "var(--space-4) 0" }}>No badges earned yet.</p>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                {BADGES.map((b) => (
+                  <div key={b.id} style={{ padding: "var(--space-3)", borderRadius: "var(--radius-md)", border: `1px solid ${b.earned ? "var(--color-accent)" : "var(--color-border)"}`, background: b.earned ? "var(--color-accent-light)" : "var(--color-surface-alt)", opacity: b.earned ? 1 : 0.6, textAlign: "center" }} role="img" aria-label={`${b.label}: ${b.earned ? "earned" : "not yet earned"}. ${b.desc}`}>
+                    <div style={{ fontSize: "1.5rem", marginBottom: "var(--space-1)" }}>{b.icon}</div>
+                    <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: b.earned ? "var(--color-accent)" : "var(--color-text-muted)", lineHeight: 1.3 }}>{b.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         </div>
       </div>

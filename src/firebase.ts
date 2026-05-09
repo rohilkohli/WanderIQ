@@ -27,8 +27,8 @@ export const auth    = getAuth(app);
 export const db      = getFirestore(app);
 export const storage = getStorage(app);
 
-// GA4 — only initialize in browser, not SSR/test
-export const analytics = typeof window !== 'undefined'
+// GA4 — only initialize in browser, not SSR/test, and only if API key is valid
+export const analytics = typeof window !== 'undefined' && firebaseConfig.apiKey !== 'demo-api-key'
   ? isSupported().then((yes) => (yes ? getAnalytics(app) : null))
   : Promise.resolve(null);
 

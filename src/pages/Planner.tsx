@@ -165,6 +165,18 @@ const Planner: React.FC = () => {
     let httpStatus = 0;
     
     try {
+      let userLocationStr = "Unknown Starting Location";
+      try {
+        if ("geolocation" in navigator) {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+          });
+          userLocationStr = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+        }
+      } catch (e) {
+        console.warn("Could not get location for commute:", e);
+      }
+
       const res = await fetch('/api/itinerary-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-ai-user-id': user?.uid ?? 'guest' },
@@ -172,6 +184,7 @@ const Planner: React.FC = () => {
           destination: destName,
           days: 3,
           budget: totalBudget,
+          userLocation: userLocationStr,
           preferences: { mobility: preferences.mobility, travelStyle: preferences.travelStyle },
           userContext: buildAiUserContext(preferences),
         }),

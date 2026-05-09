@@ -3,6 +3,9 @@
 // Serves the React SPA + proxies AI providers securely
 // ============================================================
 
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import { createServer } from 'http';
 import path from 'path';
@@ -16,7 +19,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const COHERE_API_KEY = process.env.COHERE_API_KEY || '';
@@ -590,10 +593,11 @@ app.post('/api/autofill', async (req, res) => {
 
 // ── POST /api/itinerary-generate — Full AI Trip Builder ──────
 app.post('/api/itinerary-generate', async (req, res) => {
-  const { destination, days, preferences, budget } = req.body;
+  const { destination, days, preferences, budget, userLocation } = req.body;
   const safeDestination = sanitizeText(destination, 120);
   const safeDays = Math.min(21, Math.max(1, Number(days) || 0));
   const safeBudget = Math.max(1, Number(budget) || 40000);
+  const safeLocation = sanitizeText(userLocation, 120) || "Unknown Location";
 
   if (!safeDestination || !safeDays) {
     res.status(400).json({ error: 'destination and days required' });
@@ -605,12 +609,33 @@ app.post('/api/itinerary-generate', async (req, res) => {
 
   const prompt = buildPrompt({
     task: 'autofill',
-    instruction: `Build a complete ${safeDays}-day itinerary with 1-2 activities per slot and realistic budget distribution.`,
-    payload: { destination: safeDestination, days: safeDays, totalBudget: safeBudget },
+    instruction: `Build a complete ${safeDays}-day itinerary.
+CRITICAL COMMUTE REQUIREMENTS:
+1. The first activity of Day 1 MUST be the end-to-end commute from the user's starting location (${safeLocation}) to ${safeDestination}, including the exact mode of transport and realistic estimated fares.
+2. The final activity of Day ${safeDays} MUST be the return commute from ${safeDestination} back to the starting location (${safeLocation}), including the exact mode of transport and fares.
+Ensure realistic budget distribution and 1-2 activities per slot.`,
+    payload: { destination: safeDestination, days: safeDays, totalBudget: safeBudget, userLocation: safeLocation },
     userContext,
-    outputContract: `Return ONLY raw JSON array of ${safeDays} day objects with schema:
-[{"dayNumber":1,"morning":[],"afternoon":[],"evening":[]}]
-Each activity in slots must use the autofill activity schema.`,
+    outputContract: `Return ONLY raw JSON array of ${safeDays} day objects matching this exact TypeScript interface:
+interface Activity {
+  name: string;
+  category: "restaurant" | "attraction" | "nature" | "experience" | "wellness" | "shopping";
+  description: string;
+  address: string;
+  location: { lat: number; lng: number };
+  duration: number; // minutes
+  estimatedCost: number; // INR
+  tags: string[];
+  isWheelchairAccessible: boolean;
+  rating: number;
+}
+interface Day {
+  dayNumber: number;
+  morning: Activity[];
+  afternoon: Activity[];
+  evening: Activity[];
+}
+Output an array of Day objects (Day[]).`,
   });
 
   try {
