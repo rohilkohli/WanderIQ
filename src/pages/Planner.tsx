@@ -6,6 +6,7 @@ import { useItineraryStore } from "@/store/useItineraryStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { validateDay } from "@/lib/constraints";
 import { formatCurrency, generateId } from "@/lib/utils";
+import { getAiStatusLabel } from "@/lib/aiStatus";
 import { analytics } from "@/lib/analytics";
 import type { ActivityCard, AiMeta, ItineraryDay, TimeSlot } from "@/types";
 import toast from "react-hot-toast";
@@ -38,6 +39,7 @@ const Planner: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState(0);
   const [mapVisible, setMapVisible] = useState(false);
   const [aiStatus, setAiStatus] = useState<string>("idle");
+  const statusLabel = getAiStatusLabel(aiStatus);
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
@@ -155,7 +157,7 @@ const Planner: React.FC = () => {
         </div>
         <div style={{ flex: 1 }} />
         <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
-          {aiStatus === "validated_fallback" ? "Validated / AI Fallback" : aiStatus === "idle" ? "" : "Validated"}
+          {statusLabel}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", minWidth: 180 }}>
           <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>Budget</span>

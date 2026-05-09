@@ -2,6 +2,7 @@ import { PRICE_LABELS, CONDITION_BG } from "@/components/planner/demo-data";
 import React, { useState } from "react";
 import { useDiscoverLogic } from "@/hooks/useDiscoverLogic";
 import { submitAiFeedback } from "@/lib/aiMemory";
+import { getAiStatusLabel } from "@/lib/aiStatus";
 import { useAuthStore } from "@/store/useAuthStore";
 
 /* ── Demo destination data ─────────────────────────────── */
@@ -9,6 +10,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 const Discover: React.FC = () => {
   const { moodQuery, setMoodQuery, destinations, loading, view, setView, compareIds, toggleCompare, compareDestinations, aiStatus, aiMeta, handleMoodSearch, handleSelectDestination } = useDiscoverLogic();
   const user = useAuthStore((s) => s.user);
+  const statusLabel = getAiStatusLabel(aiStatus);
   const [feedbackById, setFeedbackById] = useState<Record<string, "up" | "down">>({});
 
   const handleFeedback = async (destinationId: string, rating: "up" | "down") => {
@@ -81,7 +83,7 @@ const Discover: React.FC = () => {
             </h2>
             <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
               <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
-                {aiStatus === "validated_fallback" ? "Validated / AI Fallback" : aiStatus === "fallback_demo" ? "Demo Fallback" : "Validated"}
+                {statusLabel}
               </span>
               {(["grid", "compare"] as const).map((v) => (
                 <button key={v} onClick={() => setView(v)} className={`btn btn-sm ${view === v ? "btn-primary" : "btn-ghost"}`} aria-pressed={view === v}>

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 import { getBudgetHealth } from "@/lib/budget";
+import { getAiStatusLabel } from "@/lib/aiStatus";
 import toast from "react-hot-toast";
 import type { AiMeta, BudgetSuggestion } from "@/types";
 import { usePreferencesStore } from "@/store/usePreferencesStore";
@@ -54,6 +55,7 @@ const Budget: React.FC = () => {
   const [ratedSuggestions, setRatedSuggestions] = useState<Record<string, "up" | "down">>({});
   const [aiStatus, setAiStatus] = useState<string>("idle");
   const [aiMeta, setAiMeta] = useState<AiMeta | null>(null);
+  const statusLabel = getAiStatusLabel(aiStatus);
 
   const pieData = Object.entries(breakdown).map(([k, v]) => ({
     name: k.charAt(0).toUpperCase() + k.slice(1),
@@ -228,7 +230,7 @@ const Budget: React.FC = () => {
             ✨ AI Budget Optimizer
           </h2>
           <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
-            {aiStatus === "validated_fallback" ? "Validated / AI Fallback" : aiStatus === "idle" ? "" : "Validated"}
+            {statusLabel}
           </span>
           <button onClick={fetchSuggestions} className="btn btn-primary btn-sm" disabled={loading || suggestions.length > 0}>
             {loading ? "Optimizing..." : suggestions.length > 0 ? "Suggestions loaded" : "Optimize my budget →"}

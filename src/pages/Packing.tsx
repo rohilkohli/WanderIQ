@@ -4,6 +4,7 @@ import { analytics } from "@/lib/analytics";
 import toast from "react-hot-toast";
 import type { AiMeta, PackingCategory, PackingItem } from "@/types";
 import { buildAiUserContext, rememberAiAction, submitAiFeedback } from "@/lib/aiMemory";
+import { getAiStatusLabel } from "@/lib/aiStatus";
 import { usePreferencesStore } from "@/store/usePreferencesStore";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -81,6 +82,7 @@ const Packing: React.FC = () => {
   const [aiStatus, setAiStatus] = useState<string>("idle");
   const [aiMeta, setAiMeta] = useState<AiMeta | null>(null);
   const [feedbackRating, setFeedbackRating] = useState<"up" | "down" | null>(null);
+  const statusLabel = getAiStatusLabel(aiStatus);
 
   const totalItems = categories.flatMap((c) => c.items).length;
   const checkedItems = categories.flatMap((c) => c.items).filter((i) => i.checked).length;
@@ -173,7 +175,7 @@ const Packing: React.FC = () => {
       {/* ── AI Regen ── */}
       <div style={{ display: "flex", gap: "var(--space-3)", marginBottom: "var(--space-6)", animation: "fadeInUp 300ms ease-out 60ms both", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
         <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
-          {aiStatus === "validated_fallback" ? "Validated / AI Fallback" : aiStatus === "idle" ? "" : "Validated"}
+          {statusLabel}
         </span>
         <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
           <button onClick={handleAIGenerate} disabled={loading} className="btn btn-primary" aria-busy={loading}>

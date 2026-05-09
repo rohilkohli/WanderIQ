@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useGeminiChat } from "@/hooks/useGeminiChat";
 import { submitAiFeedback } from "@/lib/aiMemory";
+import { getAiStatusLabel } from "@/lib/aiStatus";
 import { useAuthStore } from "@/store/useAuthStore";
 
 interface ChatDrawerProps {
@@ -125,7 +126,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ onClose, itineraryContext }) =>
                 {msg.role === "model" && !msg.isStreaming && (
                   <div style={{ marginTop: "var(--space-2)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-2)" }}>
                     <span style={{ fontSize: "0.6875rem", color: "var(--color-text-muted)" }}>
-                      {msg.aiMeta?.fallbackUsed ? "Validated / AI Fallback" : "Validated"}
+                      {getAiStatusLabel(msg.aiMeta?.status, msg.aiMeta?.fallbackUsed)}
                       {msg.aiMeta?.provider ? ` · ${msg.aiMeta.provider}` : ""}
                     </span>
                     <div style={{ display: "flex", gap: "var(--space-1)" }}>
