@@ -16,6 +16,7 @@ interface StoredAiMemory {
 }
 
 const STORAGE_KEY = 'wanderiq-ai-memory';
+const MAX_ACTION_LENGTH = 180;
 
 function readMemory(): StoredAiMemory {
   if (typeof window === 'undefined') return { recentActions: [], recentRatings: [] };
@@ -38,7 +39,7 @@ function writeMemory(memory: StoredAiMemory): void {
 }
 
 export function rememberAiAction(action: string): void {
-  const safeAction = action.trim().slice(0, 180);
+  const safeAction = action.trim().slice(0, MAX_ACTION_LENGTH);
   if (!safeAction) return;
   const memory = readMemory();
   memory.recentActions = [...memory.recentActions, safeAction].slice(-8);

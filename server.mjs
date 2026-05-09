@@ -21,6 +21,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const COHERE_API_KEY = process.env.COHERE_API_KEY || '';
 const COHERE_MODEL = process.env.COHERE_MODEL || 'command-r-plus';
+const SUPPORTED_PROVIDERS = ['gemini', 'openai', 'cohere'];
 
 const geminiClient = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
@@ -33,7 +34,7 @@ const FEEDBACK_LIMIT = 200;
 const FALLBACK_ORDER = (process.env.AI_PROVIDER_FALLBACK || 'gemini,openai,cohere')
   .split(',')
   .map((item) => sanitizeText(item, 32).toLowerCase())
-  .filter((item) => ['gemini', 'openai', 'cohere'].includes(item));
+  .filter((item) => SUPPORTED_PROVIDERS.includes(item));
 
 const providerHealth = {
   gemini: { configured: Boolean(GEMINI_API_KEY), healthy: Boolean(GEMINI_API_KEY), lastError: null, degradedAt: null },
@@ -44,7 +45,7 @@ const providerHealth = {
 /** TODO(anthropic): add Anthropic provider implementation here when key/model are configured. */
 const aiLogs = [];
 const aiFeedback = [];
-/** TODO(vector-memory): replace this with durable vector memory store for long-term personalization. */
+/** TODO(vector-memory): replace this with durable vector memory store for long-term personalization. In-memory only; resets on restart. */
 const userMemory = new Map();
 
 app.use(express.json({ limit: '4mb' }));
@@ -273,7 +274,7 @@ async function callGemini({ mode, systemInstruction, prompt, parts }) {
 
 async function callOpenAI({ mode, systemInstruction, prompt }) {
   if (!OPENAI_API_KEY) throw new Error('OpenAI key missing');
-  if (mode === 'stream') throw new Error('OpenAI streaming fallback disabled in this build');
+  if (mode === 'stream') throw new Error('OpenAI streaming is not currently supported as a fallback provider. Streaming is only available with Gemini.');
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -304,7 +305,7 @@ async function callOpenAI({ mode, systemInstruction, prompt }) {
 
 async function callCohere({ mode, prompt }) {
   if (!COHERE_API_KEY) throw new Error('Cohere key missing');
-  if (mode === 'stream') throw new Error('Cohere streaming fallback disabled in this build');
+  if (mode === 'stream') throw new Error('Cohere streaming is not currently supported as a fallback provider. Streaming is only available with Gemini.');
 
   const res = await fetch('https://api.cohere.ai/v2/chat', {
     method: 'POST',
