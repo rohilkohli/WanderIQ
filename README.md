@@ -50,6 +50,12 @@ Create a `.env` file in the root directory with the following variables:
 # Google Maps & Places
 VITE_MAPS_API_KEY=your_google_maps_api_key_here
 
+# AI Providers (server-side only)
+GEMINI_API_KEY=your_gemini_api_key_here
+# Optional fallbacks
+# OPENAI_API_KEY=your_openai_api_key_here
+# COHERE_API_KEY=your_cohere_api_key_here
+
 # Firebase Configuration
 VITE_FIREBASE_API_KEY=your_firebase_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -61,8 +67,11 @@ VITE_FIREBASE_APP_ID=your_app_id
 
 ### Running Locally
 1. `npm install`
-2. `npm run dev`
-3. Open `http://localhost:3000`
+2. Start the API server (required for Discover, Autofill, and Assistant): `npm run start`
+3. In another terminal, start the Vite dev server: `npm run dev`
+4. Open the URL printed by Vite (usually `http://localhost:5173`)
+
+> Tip: The Vite dev server proxies `/api/*` requests to `http://localhost:8080` by default.
 
 ## 🐳 Deployment
 VoyaIQ is containerized using a multi-stage Docker build and deployed via Google Cloud Run. Run `npm run build` to generate the production bundle.
