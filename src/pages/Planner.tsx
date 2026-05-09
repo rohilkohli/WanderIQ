@@ -11,9 +11,10 @@ import { analytics } from "@/lib/analytics";
 import type { ActivityCard, AiMeta, ItineraryDay, TimeSlot } from "@/types";
 import toast from "react-hot-toast";
 import { buildAiUserContext, rememberAiAction } from "@/lib/aiMemory";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { isRateLimitError } from "@/lib/rateLimitCheck";
 import { DEMO_DAYS } from "@/components/planner/demo-data";
+import { attachErrorMeta, readErrorMeta } from "@/lib/errorMeta";
 
 /** Same-origin Gemini API proxy endpoint. */
 const AUTOFILL_ENDPOINT = '/api/autofill';
@@ -39,7 +40,6 @@ const Planner: React.FC = () => {
   const totalBudget = activeItinerary?.totalBudget || 50000;
 
   const [selectedDay, setSelectedDay] = useState(0);
-  const [params] = useSearchParams();
   const [mapVisible, setMapVisible] = useState(false);
   const [aiStatus, setAiStatus] = useState<string>("idle");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -95,7 +95,6 @@ const Planner: React.FC = () => {
       : [];
     const destination = activeItinerary.destination.name;
     const dayNumber = day?.dayNumber ?? 1;
-    let httpStatus = 0;
 
     try {
       const res = await fetch(AUTOFILL_ENDPOINT, {
@@ -111,14 +110,10 @@ const Planner: React.FC = () => {
         }),
       });
 
-      httpStatus = res.status;
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         const errorMsg = errorData.error || `API error: ${res.status}`;
-        const httpErr = new Error(errorMsg);
-        (httpErr as any)._httpStatus = res.status;
-        (httpErr as any)._details = errorData;
-        throw httpErr;
+        throw attachErrorMeta(new Error(errorMsg), res.status, errorData);
       }
 
       const data = await res.json() as { activity: Omit<ActivityCard, 'id' | 'source' | 'aiMeta'>; meta?: AiMeta };
@@ -131,8 +126,7 @@ const Planner: React.FC = () => {
       toast.success(`${activity.name} added by Gemini!`, { id: "autofill" });
     } catch (err) {
       console.error('Autofill failed:', err);
-      const httpStatus = (err as any)?._httpStatus;
-      const errorDetails = (err as any)?._details;
+      const { httpStatus, details: errorDetails } = readErrorMeta(err);
       // ONLY use static fallback when API quota is exhausted
       if (isRateLimitError(err, httpStatus) || isRateLimitError(errorDetails)) {
         const fallback: ActivityCard = {
@@ -162,7 +156,6 @@ const Planner: React.FC = () => {
     setIsGenerating(true);
     const destName = activeItinerary.destination.name;
     const tid = toast.loading(`Generating full itinerary for ${destName}...`);
-    let httpStatus = 0;
     
     try {
       let userLocationStr = "Unknown Starting Location";
@@ -193,10 +186,7 @@ const Planner: React.FC = () => {
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         const errorMsg = errorData.error || `Generation failed: ${res.status}`;
-        const genErr = new Error(errorMsg);
-        (genErr as any)._httpStatus = res.status;
-        (genErr as any)._details = errorData;
-        throw genErr;
+        throw attachErrorMeta(new Error(errorMsg), res.status, errorData);
       }
       
       const data = await res.json() as { itinerary: ItineraryDay[]; meta?: AiMeta };
@@ -220,8 +210,7 @@ const Planner: React.FC = () => {
       toast.success(`${generatedDays.length}-day itinerary generated!`, { id: tid });
     } catch (err) {
       console.error('Itinerary generation failed:', err);
-      const httpStatus = (err as any)?._httpStatus;
-      const errorDetails = (err as any)?._details;
+      const { httpStatus, details: errorDetails } = readErrorMeta(err);
       // ONLY fall back to demo data when API quota is exhausted
       if (isRateLimitError(err, httpStatus) || isRateLimitError(errorDetails)) {
         useItineraryStore.getState().setActiveItinerary({
@@ -235,7 +224,7 @@ const Planner: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
-  }, [activeItinerary, isGenerating, preferences, totalBudget, user?.uid]);
+  }, [activeItinerary, isGenerating, preferences, totalBudget, user]);
 
   // Auto-generate itinerary when arriving with an empty itinerary
   useEffect(() => {

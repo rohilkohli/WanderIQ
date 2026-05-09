@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useItineraryStore } from '@/store/useItineraryStore';
 import { buildAiUserContext, rememberAiAction } from '@/lib/aiMemory';
 import { isRateLimitError } from '@/lib/rateLimitCheck';
+import { attachErrorMeta, readErrorMeta } from '@/lib/errorMeta';
 
 /** Haversine distance in km between two lat/lng points. */
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -67,15 +68,13 @@ async function fetchDestinations(
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
       const errorMsg = errorData.error || `API ${res.status}`;
-      const err = new Error(errorMsg);
-      (err as any)._details = errorData;
-      throw err;
+      throw attachErrorMeta(new Error(errorMsg), res.status, errorData);
     }
     const data = (await res.json()) as { destinations: DestinationResult[]; meta?: AiMeta };
     if (!Array.isArray(data.destinations) || data.destinations.length === 0) throw new Error('No destinations found for your query');
     return { destinations: data.destinations, status: data.meta?.status ?? 'validated', meta: data.meta };
   } catch (err) {
-    const errorDetails = (err as any)?._details;
+    const { details: errorDetails } = readErrorMeta(err);
     // ONLY fall back to demo data when API quota/rate limit is exhausted
     if (isRateLimitError(err, httpStatus) || isRateLimitError(errorDetails)) {
       const base = userLat && userLng
