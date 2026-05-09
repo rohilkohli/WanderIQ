@@ -11,7 +11,7 @@ test.describe('Accessibility Audit', () => {
       await page.waitForTimeout(500); // give app a moment to render
       await injectAxe(page);
       
-      await checkA11y(page, null, {
+      await checkA11y(page, undefined, {
         includedImpacts: ['critical', 'serious'],
         detailedReport: false,
         detailedReportOptions: { html: false }
