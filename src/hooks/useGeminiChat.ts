@@ -6,8 +6,10 @@
 
 import { useState, useCallback } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 import type { ChatMessage } from '@/types';
 import { generateId } from '@/lib/utils';
+import { buildAiUserContext, rememberAiAction } from '@/lib/aiMemory';
 
 /** Same-origin API endpoint — Gemini key lives in Cloud Run env, never the browser. */
 const CHAT_ENDPOINT = '/api/chat';
@@ -25,6 +27,7 @@ async function getIdToken(): Promise<string> {
  */
 export function useGeminiChat(itineraryContext?: string) {
   const user = useAuthStore((s) => s.user);
+  const preferences = usePreferencesStore((s) => s.preferences);
   const [messages, setMessages]   = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError]         = useState<string | null>(null);
@@ -60,6 +63,7 @@ export function useGeminiChat(itineraryContext?: string) {
           headers: {
             'Content-Type':  'application/json',
             'Authorization': `Bearer ${token}`,
+            'x-ai-user-id': user?.uid ?? 'guest',
           },
           body: JSON.stringify({
             messages:          [...messages, userMsg].map((m) => ({
@@ -68,6 +72,7 @@ export function useGeminiChat(itineraryContext?: string) {
             })),
             itineraryContext,
             imageBase64,
+            userContext: buildAiUserContext(preferences),
           }),
         });
 
@@ -79,6 +84,13 @@ export function useGeminiChat(itineraryContext?: string) {
         const reader  = response.body?.getReader();
         const decoder = new TextDecoder();
         let   full    = '';
+        const aiMeta = {
+          provider: response.headers.get('x-ai-provider') ?? 'gemini',
+          model: response.headers.get('x-ai-model') ?? 'unknown',
+          validated: response.headers.get('x-ai-validated') === 'true',
+          fallbackUsed: response.headers.get('x-ai-fallback') === 'true',
+          status: response.headers.get('x-ai-fallback') === 'true' ? 'validated_fallback' : 'validated',
+        };
 
         if (reader) {
           while (true) {
@@ -88,15 +100,16 @@ export function useGeminiChat(itineraryContext?: string) {
             full += chunk;
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantMsg.id ? { ...m, content: full } : m
+                m.id === assistantMsg.id ? { ...m, content: full, aiMeta } : m
               )
             );
           }
         }
+        rememberAiAction(`chat:${text.slice(0, 80)}`);
 
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === assistantMsg.id ? { ...m, isStreaming: false } : m
+            m.id === assistantMsg.id ? { ...m, isStreaming: false, aiMeta } : m
           )
         );
       } catch {
@@ -106,7 +119,12 @@ export function useGeminiChat(itineraryContext?: string) {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMsg.id
-              ? { ...m, content: demoResponse, isStreaming: false }
+              ? {
+                  ...m,
+                  content: demoResponse,
+                  isStreaming: false,
+                  aiMeta: { provider: 'offline', model: 'demo', validated: false, fallbackUsed: true, status: 'offline_fallback' },
+                }
               : m
           )
         );
@@ -114,7 +132,7 @@ export function useGeminiChat(itineraryContext?: string) {
         setIsLoading(false);
       }
     },
-    [messages, itineraryContext, user]
+    [messages, itineraryContext, user, preferences]
   );
 
   const clearMessages = useCallback(() => setMessages([]), []);

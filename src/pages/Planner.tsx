@@ -3,11 +3,14 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { sortableKeyboardCoordinates, arrayMove } from "@dnd-kit/sortable";
 import { usePreferencesStore } from "@/store/usePreferencesStore";
 import { useItineraryStore } from "@/store/useItineraryStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { validateDay } from "@/lib/constraints";
 import { formatCurrency, generateId } from "@/lib/utils";
+import { getAiStatusLabel } from "@/lib/aiStatus";
 import { analytics } from "@/lib/analytics";
-import type { ActivityCard, ItineraryDay, TimeSlot } from "@/types";
+import type { ActivityCard, AiMeta, ItineraryDay, TimeSlot } from "@/types";
 import toast from "react-hot-toast";
+import { buildAiUserContext, rememberAiAction } from "@/lib/aiMemory";
 
 /** Same-origin Gemini API proxy endpoint. */
 const AUTOFILL_ENDPOINT = '/api/autofill';
@@ -26,6 +29,7 @@ import { PlannerMap } from "@/components/planner/PlannerMap";
  */
 const Planner: React.FC = () => {
   const { preferences } = usePreferencesStore();
+  const user = useAuthStore((s) => s.user);
   const { activeItinerary, addActivity, removeActivity, reorderActivities, addDay } = useItineraryStore();
 
   const days = activeItinerary?.days || DEMO_DAYS;
@@ -34,6 +38,8 @@ const Planner: React.FC = () => {
 
   const [selectedDay, setSelectedDay] = useState(0);
   const [mapVisible, setMapVisible] = useState(false);
+  const [aiStatus, setAiStatus] = useState<string>("idle");
+  const statusLabel = getAiStatusLabel(aiStatus);
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
@@ -84,20 +90,23 @@ const Planner: React.FC = () => {
     try {
       const res = await fetch(AUTOFILL_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-ai-user-id': user?.uid ?? 'guest' },
         body: JSON.stringify({
           destination,
           slot,
           dayNumber,
           preferences: { mobility: preferences.mobility, travelStyle: preferences.travelStyle },
           existingActivities: existingNames,
+          userContext: buildAiUserContext(preferences),
         }),
       });
 
       let activity: ActivityCard;
       if (res.ok) {
-        const data = await res.json() as { activity: Omit<ActivityCard, 'id' | 'source'> };
-        activity = { ...data.activity, id: generateId(), source: 'ai' };
+        const data = await res.json() as { activity: Omit<ActivityCard, 'id' | 'source' | 'aiMeta'>; meta?: AiMeta };
+        activity = { ...data.activity, id: generateId(), source: 'ai', aiMeta: data.meta };
+        setAiStatus(data.meta?.status ?? 'validated');
+        rememberAiAction(`autofill:${destination}:${slot}`);
       } else {
         throw new Error(`Function error: ${res.status}`);
       }
@@ -147,6 +156,9 @@ const Planner: React.FC = () => {
           </p>
         </div>
         <div style={{ flex: 1 }} />
+        <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+          {statusLabel}
+        </span>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", minWidth: 180 }}>
           <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>Budget</span>
           <div className="progress-bar" style={{ flex: 1 }}>

@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { analytics } from '@/lib/analytics';
 import { sanitizeInput } from '@/lib/utils';
-import type { DestinationResult } from '@/types';
+import type { AiMeta, DestinationResult } from '@/types';
 import { DEMO_DESTINATIONS } from '@/components/planner/demo-data';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { buildAiUserContext, rememberAiAction } from '@/lib/aiMemory';
 
 /** Haversine distance in km between two lat/lng points. */
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -42,24 +45,33 @@ function rankByLocation(
  */
 async function fetchDestinations(
   query: string,
+  preferences: Record<string, unknown>,
+  userId: string,
   userLat?: number,
   userLng?: number
-): Promise<DestinationResult[]> {
+): Promise<{ destinations: DestinationResult[]; status: string; meta?: AiMeta }> {
   try {
     const res = await fetch('/api/discover', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, userLat, userLng }),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ai-user-id': userId,
+      },
+      body: JSON.stringify({ query, userLat, userLng, preferences, userContext: buildAiUserContext(preferences) }),
     });
     if (!res.ok) throw new Error(`API ${res.status}`);
-    const data = (await res.json()) as { destinations: DestinationResult[] };
+    const data = (await res.json()) as { destinations: DestinationResult[]; meta?: AiMeta };
     if (!Array.isArray(data.destinations) || data.destinations.length === 0) throw new Error('Empty');
-    return data.destinations;
+    return { destinations: data.destinations, status: data.meta?.status ?? 'validated', meta: data.meta };
   } catch {
     const base = userLat && userLng
       ? rankByLocation(DEMO_DESTINATIONS, userLat, userLng)
       : DEMO_DESTINATIONS;
-    return base.length > 0 ? base : DEMO_DESTINATIONS;
+    return {
+      destinations: base.length > 0 ? base : DEMO_DESTINATIONS,
+      status: 'fallback_demo',
+      meta: { provider: 'demo', model: 'demo', validated: false, fallbackUsed: true, status: 'fallback_demo' },
+    };
   }
 }
 
@@ -70,9 +82,13 @@ async function fetchDestinations(
 export const useDiscoverLogic = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const preferences = usePreferencesStore((s) => s.preferences);
+  const user = useAuthStore((s) => s.user);
   const [moodQuery, setMoodQuery] = useState(params.get('mood') ?? '');
   const [destinations, setDestinations] = useState<DestinationResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [aiStatus, setAiStatus] = useState<string>('idle');
+  const [aiMeta, setAiMeta] = useState<AiMeta | null>(null);
   const [view, setView] = useState<'grid' | 'compare'>('grid');
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -91,8 +107,17 @@ export const useDiscoverLogic = () => {
     setLoading(true);
     analytics.discoverMoodSearch(q.length);
     try {
-      const results = await fetchDestinations(q, userCoords?.lat, userCoords?.lng);
-      setDestinations(results);
+      const result = await fetchDestinations(
+        q,
+        preferences as unknown as Record<string, unknown>,
+        user?.uid ?? 'guest',
+        userCoords?.lat,
+        userCoords?.lng
+      );
+      setDestinations(result.destinations);
+      setAiStatus(result.status);
+      setAiMeta(result.meta ?? null);
+      rememberAiAction(`discover:${q.slice(0, 80)}`);
     } finally {
       setLoading(false);
     }
@@ -125,6 +150,8 @@ export const useDiscoverLogic = () => {
     view, setView,
     compareIds, toggleCompare,
     compareDestinations,
+    aiStatus,
+    aiMeta,
     handleMoodSearch,
     handleSelectDestination,
   };

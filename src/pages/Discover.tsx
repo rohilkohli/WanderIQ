@@ -1,11 +1,30 @@
 import { PRICE_LABELS, CONDITION_BG } from "@/components/planner/demo-data";
-import React from "react";
+import React, { useState } from "react";
 import { useDiscoverLogic } from "@/hooks/useDiscoverLogic";
+import { submitAiFeedback } from "@/lib/aiMemory";
+import { getAiStatusLabel } from "@/lib/aiStatus";
+import { useAuthStore } from "@/store/useAuthStore";
 
 /* ── Demo destination data ─────────────────────────────── */
 
 const Discover: React.FC = () => {
-  const { moodQuery, setMoodQuery, destinations, loading, view, setView, compareIds, toggleCompare, compareDestinations, handleMoodSearch, handleSelectDestination } = useDiscoverLogic();
+  const { moodQuery, setMoodQuery, destinations, loading, view, setView, compareIds, toggleCompare, compareDestinations, aiStatus, aiMeta, handleMoodSearch, handleSelectDestination } = useDiscoverLogic();
+  const user = useAuthStore((s) => s.user);
+  const statusLabel = getAiStatusLabel(aiStatus);
+  const [feedbackById, setFeedbackById] = useState<Record<string, "up" | "down">>({});
+
+  const handleFeedback = async (destinationId: string, rating: "up" | "down") => {
+    if (feedbackById[destinationId]) return;
+    setFeedbackById((prev) => ({ ...prev, [destinationId]: rating }));
+    await submitAiFeedback({
+      feature: "discover",
+      responseId: destinationId,
+      rating,
+      provider: aiMeta?.provider,
+      model: aiMeta?.model,
+      userId: user?.uid ?? "guest",
+    });
+  };
 
   return (
     <div style={{ padding: "var(--space-8)", maxWidth: 1200, margin: "0 auto" }}>
@@ -62,7 +81,10 @@ const Discover: React.FC = () => {
             <h2 id="results-heading" style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem" }}>
               {destinations.length} destinations found
             </h2>
-            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                {statusLabel}
+              </span>
               {(["grid", "compare"] as const).map((v) => (
                 <button key={v} onClick={() => setView(v)} className={`btn btn-sm ${view === v ? "btn-primary" : "btn-ghost"}`} aria-pressed={view === v}>
                   {v === "grid" ? "⊞ Grid" : "⇔ Compare"}
@@ -120,6 +142,36 @@ const Discover: React.FC = () => {
                         </li>
                       ))}
                     </ul>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Was this helpful?</span>
+                      <div style={{ display: "flex", gap: "var(--space-1)" }}>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ minHeight: 24, padding: "2px 8px" }}
+                          disabled={Boolean(feedbackById[dest.id])}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFeedback(dest.id, "up");
+                          }}
+                          aria-label={`Rate ${dest.name} as helpful`}
+                        >
+                          👍
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ minHeight: 24, padding: "2px 8px" }}
+                          disabled={Boolean(feedbackById[dest.id])}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFeedback(dest.id, "down");
+                          }}
+                          aria-label={`Rate ${dest.name} as not helpful`}
+                        >
+                          👎
+                        </button>
+                      </div>
+                    </div>
 
                     <div style={{ display: "flex", gap: "var(--space-2)" }}>
                       <button

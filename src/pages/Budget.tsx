@@ -2,8 +2,12 @@ import React, { useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 import { getBudgetHealth } from "@/lib/budget";
+import { getAiStatusLabel } from "@/lib/aiStatus";
 import toast from "react-hot-toast";
-import type { BudgetSuggestion } from "@/types";
+import type { AiMeta, BudgetSuggestion } from "@/types";
+import { usePreferencesStore } from "@/store/usePreferencesStore";
+import { useAuthStore } from "@/store/useAuthStore";
+import { buildAiUserContext, rememberAiAction, submitAiFeedback } from "@/lib/aiMemory";
 
 const DEMO_BUDGET = {
   total: 40000,
@@ -39,6 +43,8 @@ const CATEGORY_ICONS: Record<string, string> = {
 type ApiBudgetSuggestion = Omit<BudgetSuggestion, "description"> & { desc: string };
 
 const Budget: React.FC = () => {
+  const preferences = usePreferencesStore((s) => s.preferences);
+  const user = useAuthStore((s) => s.user);
   const { breakdown, total } = DEMO_BUDGET;
   const spent = Object.values(breakdown).reduce((s, v) => s + v, 0);
   const pct = Math.round((spent / total) * 100);
@@ -46,6 +52,10 @@ const Budget: React.FC = () => {
   const [suggestions, setSuggestions] = useState<ApiBudgetSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [appliedSuggestions, setApplied] = useState<string[]>([]);
+  const [ratedSuggestions, setRatedSuggestions] = useState<Record<string, "up" | "down">>({});
+  const [aiStatus, setAiStatus] = useState<string>("idle");
+  const [aiMeta, setAiMeta] = useState<AiMeta | null>(null);
+  const statusLabel = getAiStatusLabel(aiStatus);
 
   const pieData = Object.entries(breakdown).map(([k, v]) => ({
     name: k.charAt(0).toUpperCase() + k.slice(1),
@@ -64,13 +74,22 @@ const Budget: React.FC = () => {
     try {
       const res = await fetch("/api/budget-optimize", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ destination: "Goa", breakdown, total }),
+        headers: { "Content-Type": "application/json", "x-ai-user-id": user?.uid ?? "guest" },
+        body: JSON.stringify({
+          destination: "Goa",
+          breakdown,
+          total,
+          preferences,
+          userContext: buildAiUserContext(preferences),
+        }),
       });
       if (!res.ok) throw new Error("Failed to optimize budget");
-      const data = await res.json() as { suggestions?: ApiBudgetSuggestion[] };
+      const data = await res.json() as { suggestions?: ApiBudgetSuggestion[]; meta?: AiMeta };
       if (Array.isArray(data.suggestions)) {
         setSuggestions(data.suggestions);
+        setAiStatus(data.meta?.status ?? "validated");
+        setAiMeta(data.meta ?? null);
+        rememberAiAction("budget:optimize");
         toast.success("Budget optimized by Gemini AI!");
       }
     } catch (err) {
@@ -85,6 +104,19 @@ const Budget: React.FC = () => {
     if (appliedSuggestions.includes(title)) return;
     setApplied((p) => [...p, title]);
     toast.success(`Applied! Saving ${formatCurrency(savings)} 💰`);
+  };
+
+  const rateSuggestion = async (suggestion: ApiBudgetSuggestion, rating: "up" | "down") => {
+    if (ratedSuggestions[suggestion.title]) return;
+    setRatedSuggestions((prev) => ({ ...prev, [suggestion.title]: rating }));
+    await submitAiFeedback({
+      feature: "budget",
+      responseId: suggestion.title,
+      rating,
+      provider: aiMeta?.provider,
+      model: aiMeta?.model,
+      userId: user?.uid ?? "guest",
+    });
   };
 
   const healthColors = { good: "var(--color-success)", warning: "var(--color-warning)", danger: "var(--color-error)" };
@@ -197,6 +229,9 @@ const Budget: React.FC = () => {
           <h2 id="optimize-heading" style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem" }}>
             ✨ AI Budget Optimizer
           </h2>
+          <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+            {statusLabel}
+          </span>
           <button onClick={fetchSuggestions} className="btn btn-primary btn-sm" disabled={loading || suggestions.length > 0}>
             {loading ? "Optimizing..." : suggestions.length > 0 ? "Suggestions loaded" : "Optimize my budget →"}
           </button>
@@ -218,6 +253,24 @@ const Budget: React.FC = () => {
                   <button onClick={() => applySuggestion(s.title, s.savings)} disabled={appliedSuggestions.includes(s.title)} className="btn btn-sm btn-secondary" style={{ marginTop: "var(--space-2)" }}>
                     {appliedSuggestions.includes(s.title) ? "✓ Applied" : "Apply"}
                   </button>
+                  <div style={{ display: "flex", gap: "var(--space-1)", marginTop: "var(--space-2)", justifyContent: "flex-end" }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ minHeight: 24, padding: "2px 8px" }}
+                      disabled={Boolean(ratedSuggestions[s.title])}
+                      onClick={() => rateSuggestion(s, "up")}
+                    >
+                      👍
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ minHeight: 24, padding: "2px 8px" }}
+                      disabled={Boolean(ratedSuggestions[s.title])}
+                      onClick={() => rateSuggestion(s, "down")}
+                    >
+                      👎
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
