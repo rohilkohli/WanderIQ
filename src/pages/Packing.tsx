@@ -65,6 +65,12 @@ const INITIAL_LIST: PackingCategory[] = [
   },
 ];
 
+const DEFAULT_PACKING_REQUEST = {
+  destination: "Goa",
+  days: 7,
+  tripType: "Beach & Cultural",
+};
+
 const Packing: React.FC = () => {
   const preferences = usePreferencesStore((s) => s.preferences);
   const user = useAuthStore((s) => s.user);
@@ -102,13 +108,14 @@ const Packing: React.FC = () => {
     setLoading(true);
     analytics.packingListGenerated();
     try {
+      const { destination, days, tripType } = DEFAULT_PACKING_REQUEST;
       const res = await fetch("/api/packing-generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ai-user-id": user?.uid ?? "guest" },
         body: JSON.stringify({
-          destination: "Goa",
-          days: 7,
-          tripType: "Beach & Cultural",
+          destination,
+          days,
+          tripType,
           preferences,
           userContext: buildAiUserContext(preferences),
         }),
@@ -120,7 +127,7 @@ const Packing: React.FC = () => {
         setAiStatus(data.meta?.status ?? "validated");
         setAiMeta(data.meta ?? null);
         setFeedbackRating(null);
-        rememberAiAction("packing:goa:7d");
+        rememberAiAction(`packing:${destination}:${days}d`);
         toast.success("Packing list updated by Gemini AI!");
       }
     } catch (err) {
@@ -136,7 +143,7 @@ const Packing: React.FC = () => {
     setFeedbackRating(rating);
     await submitAiFeedback({
       feature: "packing",
-      responseId: "packing-goa-7d",
+      responseId: `packing:${DEFAULT_PACKING_REQUEST.destination}:${DEFAULT_PACKING_REQUEST.days}d`,
       rating,
       provider: aiMeta?.provider,
       model: aiMeta?.model,
