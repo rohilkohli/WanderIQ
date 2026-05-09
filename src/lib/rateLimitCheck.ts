@@ -11,7 +11,7 @@
 export function isRateLimitError(err: unknown, httpStatus?: number): boolean {
   if (httpStatus === 429) return true;
 
-  const getMsg = (e: any): string => {
+  const getMsg = (e: unknown): string => {
     if (typeof e === 'string') return e.toLowerCase();
     if (e instanceof Error) return e.message.toLowerCase();
     if (e && typeof e === 'object') {
